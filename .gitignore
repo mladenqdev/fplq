@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+data/
+.DS_Store
+*.log
+.turbo/
+coverage/
+dev-dist/
+.wrangler/
+apps/api/data/

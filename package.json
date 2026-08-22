@@ -1,0 +1,26 @@
+{
+  "name": "fplq",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.12.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"pnpm --filter @fplq/api dev\" \"pnpm --filter @fplq/web dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "check": "pnpm -r check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "deploy:api": "pnpm --filter @fplq/api deploy",
+    "deploy:web": "pnpm --filter @fplq/web build && wrangler pages deploy apps/web/dist --project-name fplq"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.40.0"
+  }
+}

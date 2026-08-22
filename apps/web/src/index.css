@@ -1,0 +1,138 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji';
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-warn: var(--warn);
+}
+
+/* Light theme (default :root). Dark is applied via the `.dark` class. */
+:root {
+  --bg: #eef2f8;
+  --surface: #ffffff;
+  --surface-2: #e3e9f3;
+  --line: rgba(14, 22, 38, 0.1);
+  --fg: #0e1626;
+  --muted: #5a6478;
+  --faint: #8791a5;
+  --accent: #009a53;
+  --accent-dim: #067f45;
+  --brand: #0091d6;
+  --brand-soft: rgba(0, 145, 214, 0.12);
+  --up: #0a8f4f;
+  --down: #d6284b;
+  --warn: #b26a00;
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0a0f1e;
+  --surface: #121a2e;
+  --surface-2: #1b2540;
+  --line: rgba(255, 255, 255, 0.08);
+  --fg: #eef3fb;
+  --muted: #9aa8c4;
+  --faint: #6b7796;
+  --accent: #00ff87;
+  --accent-dim: #00c46a;
+  --brand: #22e0ff;
+  --brand-soft: rgba(34, 224, 255, 0.16);
+  --up: #00e078;
+  --down: #ff5c7a;
+  --warn: #ffb020;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100%;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Hide scrollbars on horizontal scrollers while keeping them scrollable. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cheap virtualization for long lists: skip layout/paint for off-screen rows. */
+.cv-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 56px;
+}
+
+@keyframes fplq-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+.pulse-dot {
+  animation: fplq-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes fplq-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sheet-in {
+  animation: fplq-sheet-in 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fplq-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.fade-in {
+  animation: fplq-fade-in 0.18s ease-out;
+}
