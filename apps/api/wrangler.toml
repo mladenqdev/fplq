@@ -12,7 +12,7 @@ FPLQ_TRACKED_ENTRIES = "1965441"
 [[d1_databases]]
 binding = "DB"
 database_name = "fplq"
-database_id = "REPLACE_AT_DEPLOY"
+database_id = "0a849dea-9144-4cd0-bc84-8363fe6906ae"
 migrations_dir = "migrations"
 
 # Cron runs every minute; the scheduled handler decides live vs idle and no-ops the
