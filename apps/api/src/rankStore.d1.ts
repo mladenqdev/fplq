@@ -3,17 +3,9 @@
 // SqliteRankStore. Uses parameterized queries. Never imported by the Node bundle.
 
 import type { D1Database } from '@cloudflare/workers-types';
-import {
-  type RankStore,
-  type RankSampleRow,
-  type RawRankRow,
-  toRankSampleRow,
-} from './rankStore';
+import { type RankStore, type RankSampleRow, type RawRankRow, toRankSampleRow } from './rankStore';
 
-type LastRow = Pick<
-  RawRankRow,
-  'overall_rank' | 'overall_points' | 'event_points' | 'event_rank'
->;
+type LastRow = Pick<RawRankRow, 'overall_rank' | 'overall_points' | 'event_points' | 'event_rank'>;
 
 export class D1RankStore implements RankStore {
   constructor(private readonly db: D1Database) {}

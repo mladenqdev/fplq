@@ -4,12 +4,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import {
-  type RankStore,
-  type RankSampleRow,
-  type RawRankRow,
-  toRankSampleRow,
-} from './rankStore';
+import { type RankStore, type RankSampleRow, type RawRankRow, toRankSampleRow } from './rankStore';
 
 export class SqliteRankStore implements RankStore {
   private readonly db: DatabaseSync;

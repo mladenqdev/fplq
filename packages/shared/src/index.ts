@@ -8,4 +8,5 @@ export * from './free-transfers';
 export * from './prices';
 export * from './planner';
 export * from './fdr';
+export * from './projection';
 export * from './format';

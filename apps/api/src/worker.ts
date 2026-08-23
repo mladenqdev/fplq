@@ -68,11 +68,7 @@ export default {
     return app.fetch(request, env, ctx);
   },
 
-  async scheduled(
-    controller: ScheduledController,
-    env: Env,
-    ctx: ExecutionContext
-  ): Promise<void> {
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const appCtx = buildContext(env);
     ctx.waitUntil(runScheduledSample(appCtx, controller.scheduledTime));
   },

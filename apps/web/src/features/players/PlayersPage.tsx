@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatPrice, type ElementDto } from '@fplq/shared';
 import { useBootstrap, useFixtures } from '../../lib/queries';
 import { useBootstrapIndex } from '../../lib/bootstrap-index';
@@ -6,6 +6,9 @@ import { buildTeamFixtureIndex, type TeamFixtureItem } from '../../lib/team-fixt
 import { ErrorState, LoadingScreen } from '../../components/states';
 import PlayerRow from './PlayerRow';
 import PlayerDetailSheet from './PlayerDetailSheet';
+import CompareBar from './CompareBar';
+import CompareSheet from './CompareSheet';
+import { MAX_COMPARE } from './compare';
 import { SORT_OPTIONS, sortValue, type SortKey } from './sorting';
 
 const POSITIONS = [
@@ -28,6 +31,10 @@ export default function PlayersPage() {
   const [sortKey, setSortKey] = useState<SortKey>('totalPoints');
   const [selected, setSelected] = useState<ElementDto | null>(null);
 
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+
   const fixtureIndex = useMemo(
     () =>
       fixturesQ.data ? buildTeamFixtureIndex(fixturesQ.data) : new Map<string, TeamFixtureItem[]>(),
@@ -49,6 +56,16 @@ export default function PlayersPage() {
     return list;
   }, [bootstrapQ.data, position, team, maxPrice, search, sortKey]);
 
+  const comparePlayers = useMemo(
+    () =>
+      compareIds.map((id) => index?.elementById.get(id)).filter((e): e is ElementDto => e != null),
+    [compareIds, index]
+  );
+
+  useEffect(() => {
+    if (compareOpen && comparePlayers.length < 2) setCompareOpen(false);
+  }, [compareOpen, comparePlayers.length]);
+
   if (bootstrapQ.isPending) return <LoadingScreen label="Loading players" />;
   if (bootstrapQ.isError || !index || !bootstrapQ.data) {
     return <ErrorState error={bootstrapQ.error} onRetry={() => bootstrapQ.refetch()} />;
@@ -56,8 +73,36 @@ export default function PlayersPage() {
 
   const nextEvent = bootstrapQ.data.nextEvent ?? bootstrapQ.data.currentEvent ?? null;
 
+  const toggleCompareMode = () => {
+    if (compareMode) {
+      setCompareIds([]);
+      setCompareOpen(false);
+    } else {
+      setSelected(null);
+    }
+    setCompareMode((on) => !on);
+  };
+
+  const toggleCompare = (id: number) =>
+    setCompareIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : prev.length >= MAX_COMPARE
+          ? prev
+          : [...prev, id]
+    );
+
+  const removeCompare = (id: number) => setCompareIds((prev) => prev.filter((x) => x !== id));
+
+  const clearCompare = () => {
+    setCompareIds([]);
+    setCompareOpen(false);
+  };
+
+  const showBar = compareMode;
+
   return (
-    <div className="py-3">
+    <div className={`py-3 ${showBar ? 'pb-24' : ''}`}>
       <div className="sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-20 -mx-3 mb-2 space-y-2 border-b border-line bg-bg/95 px-3 pb-2.5 pt-1 backdrop-blur">
         <input
           value={search}
@@ -103,6 +148,14 @@ export default function PlayersPage() {
               className="w-full accent-(--accent)"
             />
           </label>
+          <button
+            onClick={toggleCompareMode}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+              compareMode ? 'bg-accent text-black' : 'bg-surface2 text-muted'
+            }`}
+          >
+            Compare
+          </button>
           <span className="num text-[11px] text-faint">{filtered.length}</span>
         </div>
         <div className="no-scrollbar -mx-3 flex gap-1.5 overflow-x-auto px-3">
@@ -120,31 +173,62 @@ export default function PlayersPage() {
         </div>
       </div>
 
+      {compareMode && (
+        <p className="mb-2 px-1 text-[11px] text-muted">
+          Select up to {MAX_COMPARE} players to compare head to head.
+        </p>
+      )}
+
       <div className="overflow-hidden rounded-2xl border border-line bg-surface">
         {filtered.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted">No players match.</p>
         ) : (
           <div className="divide-y divide-line">
-            {filtered.map((el) => (
-              <PlayerRow
-                key={el.id}
-                element={el}
-                index={index}
-                sortKey={sortKey}
-                onClick={() => setSelected(el)}
-              />
-            ))}
+            {filtered.map((el) => {
+              const checked = compareIds.includes(el.id);
+              return (
+                <PlayerRow
+                  key={el.id}
+                  element={el}
+                  index={index}
+                  sortKey={sortKey}
+                  onClick={() => (compareMode ? toggleCompare(el.id) : setSelected(el))}
+                  selectable={compareMode}
+                  checked={checked}
+                  disabled={compareMode && !checked && compareIds.length >= MAX_COMPARE}
+                />
+              );
+            })}
           </div>
         )}
       </div>
 
       <PlayerDetailSheet
-        element={selected}
+        element={compareMode ? null : selected}
         index={index}
         fixtureIndex={fixtureIndex}
         nextEvent={nextEvent}
         onClose={() => setSelected(null)}
       />
+
+      {showBar && (
+        <CompareBar
+          players={comparePlayers}
+          onRemove={removeCompare}
+          onClear={clearCompare}
+          onCompare={() => setCompareOpen(true)}
+        />
+      )}
+
+      {compareOpen && (
+        <CompareSheet
+          players={comparePlayers}
+          index={index}
+          onRemove={removeCompare}
+          onClear={clearCompare}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
     </div>
   );
 }

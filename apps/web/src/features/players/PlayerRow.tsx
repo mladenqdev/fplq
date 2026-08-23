@@ -7,6 +7,9 @@ interface Props {
   index: BootstrapIndex;
   sortKey: SortKey;
   onClick: () => void;
+  selectable?: boolean;
+  checked?: boolean;
+  disabled?: boolean;
 }
 
 function statusDot(status: string): string | null {
@@ -32,13 +35,33 @@ function metric(el: ElementDto, key: SortKey): string {
   }
 }
 
-export default function PlayerRow({ element, index, sortKey, onClick }: Props) {
+export default function PlayerRow({
+  element,
+  index,
+  sortKey,
+  onClick,
+  selectable = false,
+  checked = false,
+  disabled = false,
+}: Props) {
   const dot = statusDot(element.status);
   return (
     <button
       onClick={onClick}
-      className="cv-row flex w-full items-center gap-3 px-3 py-2 text-left active:bg-surface2"
+      disabled={disabled}
+      className={`cv-row flex w-full items-center gap-3 px-3 py-2 text-left active:bg-surface2 ${
+        checked ? 'bg-accent/10' : disabled ? 'opacity-40' : ''
+      }`}
     >
+      {selectable && (
+        <span
+          className={`grid size-5 shrink-0 place-items-center rounded-full border text-[11px] ${
+            checked ? 'border-accent bg-accent text-black' : 'border-line text-transparent'
+          }`}
+        >
+          ✓
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold text-fg">{element.webName}</span>
