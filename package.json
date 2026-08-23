@@ -14,8 +14,7 @@
     "check": "pnpm -r check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "deploy:api": "pnpm --filter @fplq/api deploy",
-    "deploy:web": "pnpm --filter @fplq/web build && wrangler pages deploy apps/web/dist --project-name fplq"
+    "deploy": "pnpm --filter @fplq/web build && pnpm --filter @fplq/api exec wrangler deploy"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",

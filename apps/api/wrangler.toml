@@ -1,21 +1,26 @@
-name = "fplq-api"
+name = "fplq"
 main = "src/worker.ts"
 compatibility_date = "2026-08-01"
 
-# Vars are read by src/worker.ts (Env). Same default tracked entry as the Node .env.
+# One Worker serves both the API (/api/*) and the built web app. Static files are
+# served directly from the ASSETS binding; any non-file path falls back to
+# index.html so client-side routes (/planner, /fixtures, /league/:id) resolve.
+# Directory is relative to this config (apps/api) -> the web build output.
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
 [vars]
 FPLQ_TRACKED_ENTRIES = "1965441"
 
-# Rank history store. database_id is a PLACEHOLDER: the orchestrator runs
-# `wrangler d1 create fplq` and pastes the returned id here before the first deploy.
-# Apply the schema with `wrangler d1 migrations apply fplq` (add --local for local dev).
 [[d1_databases]]
 binding = "DB"
 database_name = "fplq"
 database_id = "0a849dea-9144-4cd0-bc84-8363fe6906ae"
 migrations_dir = "migrations"
 
-# Cron runs every minute; the scheduled handler decides live vs idle and no-ops the
-# per-entry sampling on idle non-15-minute marks (see worker.ts).
+# Cron runs every minute; the scheduled handler samples every minute while live and
+# only on 15-minute marks when idle (see worker.ts).
 [triggers]
 crons = ["* * * * *"]

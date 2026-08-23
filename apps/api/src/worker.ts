@@ -6,6 +6,7 @@
 import type {
   D1Database,
   ExecutionContext,
+  Fetcher,
   ScheduledController,
 } from '@cloudflare/workers-types';
 import { AppContext, parseTrackedEntries } from './context';
@@ -15,6 +16,7 @@ import { sampleTrackedEntriesOnce } from './sample';
 
 export interface Env {
   DB: D1Database;
+  ASSETS: Fetcher;
   FPLQ_TRACKED_ENTRIES?: string;
 }
 
@@ -49,6 +51,16 @@ async function runScheduledSample(ctx: AppContext, scheduledTime: number): Promi
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // One Worker serves both halves: /api/* is the Hono app, everything else is the
+    // built web app served from the ASSETS binding (SPA fallback -> index.html, so
+    // client-side routes like /planner resolve). Same origin, so no CORS needed.
+    const url = new URL(request.url);
+    if (!url.pathname.startsWith('/api/')) {
+      // Cast bridges the @cloudflare/workers-types Request/Response and the DOM
+      // lib types (they differ only in getSetCookie/cf props); runtime is identical.
+      const assetReq = request as unknown as Parameters<Fetcher['fetch']>[0];
+      return env.ASSETS.fetch(assetReq) as unknown as Response;
+    }
     if (startedAt === 0) startedAt = Date.now();
     const appCtx = buildContext(env);
     // No compress here: Cloudflare compresses at the edge (doing both double-encodes).
