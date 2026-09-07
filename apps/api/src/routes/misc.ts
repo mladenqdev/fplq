@@ -3,6 +3,7 @@ import type { LadderDto, LadderRungDto, FplLeagueStandingResult } from '@fplq/sh
 import type { AppContext } from '../context';
 import { currentEventId } from '../mappers/bootstrap';
 import { json, intParam } from './util';
+import { buildDefcons } from '../builders/defcons';
 
 const OVERALL_LEAGUE = 314;
 const LADDER_RANKS = [
@@ -11,6 +12,7 @@ const LADDER_RANKS = [
 const PAGE_SIZE = 50;
 
 export function registerMiscRoutes(app: Hono, ctx: AppContext): void {
+  app.get('/api/players/defcons', async (c) => c.json(await buildDefcons(ctx)));
   app.get('/api/overall/ladder', async (c) => {
     const pages = [...new Set(LADDER_RANKS.map((r) => Math.ceil(r / PAGE_SIZE)))];
     const settled = await Promise.allSettled(pages.map((p) => ctx.getLeague(OVERALL_LEAGUE, p)));

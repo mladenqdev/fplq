@@ -58,6 +58,19 @@ function buildCtx(over: Partial<PlannerContext> = {}): PlannerContext {
 }
 
 describe('plan mutations (pure, immutable)', () => {
+  it('treats successive replacements in one GW as a single transfer and restores the original for free', () => {
+    const initial = emptyPlan(99, 3);
+    const first = addTransfer(initial, 4, { out: 3, in: 100 });
+    const second = addTransfer(first, 4, { out: 100, in: 201 });
+    expect(second.gameweeks[4]!.transfers).toEqual([{ out: 3, in: 201 }]);
+    expect(first.gameweeks[4]!.transfers).toEqual([{ out: 3, in: 100 }]);
+    const reverted = addTransfer(second, 4, { out: 201, in: 3 });
+    expect(reverted.gameweeks[4]!.transfers).toEqual([]);
+    const derived = derivePlan(reverted, buildCtx()).gameweeks[0]!;
+    expect(derived.bank).toBe(0);
+    expect(derived.transfersMade).toBe(0);
+    expect(derived.hitCost).toBe(0);
+  });
   it('emptyPlan creates the horizon of gameweeks after the base event', () => {
     const plan = emptyPlan(99, 3, 5, '2026-01-01T00:00:00Z');
     expect(

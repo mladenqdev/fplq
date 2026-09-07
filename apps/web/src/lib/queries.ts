@@ -3,11 +3,22 @@ import { api } from './api';
 
 const MIN = 60_000;
 
+export function usePlayerDefcons(enabled = true) {
+  return useQuery({
+    queryKey: ['playerDefcons'],
+    queryFn: api.playerDefcons,
+    enabled,
+    staleTime: 2 * MIN,
+    refetchInterval: enabled ? 2 * MIN : false,
+  });
+}
+
 export function useBootstrap() {
   return useQuery({
     queryKey: ['bootstrap'],
     queryFn: api.bootstrap,
     staleTime: 2 * MIN,
+    refetchInterval: 2 * MIN,
   });
 }
 
@@ -15,7 +26,8 @@ export function useFixtures() {
   return useQuery({
     queryKey: ['fixtures'],
     queryFn: api.fixtures,
-    staleTime: 2 * MIN,
+    staleTime: MIN,
+    refetchInterval: MIN,
   });
 }
 
@@ -25,6 +37,7 @@ export function useFixturesForGw(gw: number | null) {
     queryFn: () => api.fixturesForGw(gw as number),
     enabled: gw != null,
     staleTime: MIN,
+    refetchInterval: MIN,
   });
 }
 
@@ -45,14 +58,13 @@ export function useEntryLive(entryId: number, gw: number | null) {
   });
 }
 
-export function useRankHistory(entryId: number, gw: number | null, live: boolean) {
+export function useRankHistory(entryId: number, gw: number | null, progressing: boolean) {
   return useQuery({
     queryKey: ['rankHistory', entryId, gw],
     queryFn: () => api.rankHistory(entryId, gw as number),
     enabled: gw != null,
     staleTime: 30_000,
-    refetchInterval: live ? 60_000 : false,
-    placeholderData: keepPreviousData,
+    refetchInterval: progressing ? MIN : 5 * MIN,
   });
 }
 
@@ -61,6 +73,7 @@ export function useLadder() {
     queryKey: ['ladder'],
     queryFn: api.ladder,
     staleTime: 2 * MIN,
+    refetchInterval: 2 * MIN,
     placeholderData: keepPreviousData,
   });
 }

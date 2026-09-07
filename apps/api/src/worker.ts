@@ -20,17 +20,21 @@ export interface Env {
   FPLQ_TRACKED_ENTRIES?: string;
 }
 
-// The routes only need `noteLiveRequest`. On Workers each request is a fresh isolate and
-// the scheduled pass samples the configured tracked entries only, so recording ad-hoc
-// requests would not survive to the next cron; a no-op is correct here.
+// Scheduled invocations may run in a different isolate, so only configured entries
+// can be relied on for background sampling.
 const noopSink = { noteLiveRequest() {} };
 
-// NOTE: the in-memory TTL cache lives on this AppContext, so on Workers it is per-isolate
-// (each isolate keeps its own cache, and a fresh AppContext is built per invocation). That
-// only means more upstream calls across isolates; correctness is unaffected. We do NOT try
-// to share the cache across isolates in v1.
-function buildContext(env: Env): AppContext {
-  return new AppContext(parseTrackedEntries(env.FPLQ_TRACKED_ENTRIES), new D1RankStore(env.DB));
+let cachedContext: { db: D1Database; tracked: string | undefined; ctx: AppContext } | undefined;
+
+export function buildContext(env: Env): AppContext {
+  if (cachedContext?.db !== env.DB || cachedContext.tracked !== env.FPLQ_TRACKED_ENTRIES) {
+    cachedContext = {
+      db: env.DB,
+      tracked: env.FPLQ_TRACKED_ENTRIES,
+      ctx: new AppContext(parseTrackedEntries(env.FPLQ_TRACKED_ENTRIES), new D1RankStore(env.DB)),
+    };
+  }
+  return cachedContext.ctx;
 }
 
 // Date.now() is pinned to 0 at Worker global scope, so capture the isolate's start
@@ -41,7 +45,7 @@ let startedAt = 0;
 // only sample on the 15-minute marks, matching the Node sampler's 60s-live / 15min-idle
 // cadence. Determining liveness needs bootstrap+fixtures warm, so idle non-mark minutes
 // still do those two cached fetches but skip the per-entry loop, keeping them cheap.
-async function runScheduledSample(ctx: AppContext, scheduledTime: number): Promise<void> {
+export async function runScheduledSample(ctx: AppContext, scheduledTime: number): Promise<void> {
   await Promise.allSettled([ctx.getBootstrap(), ctx.getFixtures()]);
   const live = ctx.liveness.isLive();
   const minute = new Date(scheduledTime).getUTCMinutes();

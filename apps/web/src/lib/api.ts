@@ -77,11 +77,13 @@ export interface ElementFixtureRow {
 }
 
 export interface ElementHistoryRow {
+  fixture: number;
   round: number;
   opponent_team: number;
   was_home: boolean;
   total_points: number;
   minutes: number;
+  defensive_contribution?: number;
   goals_scored: number;
   assists: number;
   clean_sheets: number;
@@ -101,6 +103,10 @@ export interface ElementSummaryDto {
 }
 
 export const api = {
+  playerDefcons: () =>
+    get<{
+      players: Record<number, { appearances: number; total: number; perGame: number | null }>;
+    }>('/players/defcons'),
   health: () => get<HealthDto>('/health'),
   bootstrap: () => get<BootstrapDto>('/bootstrap'),
   fixtures: () => get<FixtureDto[]>('/fixtures'),

@@ -71,7 +71,14 @@ export function addTransfer(
 ): PlannerPlan {
   const gameweeks = cloneGameweeks(plan);
   const gw = gameweeks[event] ?? { transfers: [], chip: null };
-  gw.transfers = [...gw.transfers, { ...transfer }];
+  const prior = gw.transfers.findIndex((t) => t.in === transfer.out);
+  if (prior >= 0) {
+    const original = gw.transfers[prior]!;
+    if (original.out === transfer.in) gw.transfers.splice(prior, 1);
+    else gw.transfers[prior] = { out: original.out, in: transfer.in };
+  } else if (transfer.out !== transfer.in) {
+    gw.transfers = [...gw.transfers, { ...transfer }];
+  }
   gameweeks[event] = gw;
   return withGameweeks(plan, gameweeks, now);
 }

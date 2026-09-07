@@ -14,7 +14,7 @@ const MINUTE = 60 * SECOND;
 // TTLs per upstream resource: { while live, otherwise }.
 export const TTL = {
   bootstrap: { live: 2 * MINUTE, idle: 10 * MINUTE },
-  fixtures: { live: 2 * MINUTE, idle: 10 * MINUTE },
+  fixtures: { live: MINUTE, idle: MINUTE },
   fixturesByEvent: { live: 45 * SECOND, idle: 10 * MINUTE },
   live: { live: 45 * SECOND, idle: 10 * MINUTE },
   eventStatus: { live: 60 * SECOND, idle: 10 * MINUTE },
@@ -61,8 +61,13 @@ export class TtlCache {
 
     const pending = this.loading.get(key);
     if (pending) {
-      const stored = await pending;
-      return { value: stored.value as T, fetchedAt: stored.fetchedAt };
+      try {
+        const stored = await pending;
+        return { value: stored.value as T, fetchedAt: stored.fetchedAt };
+      } catch (err) {
+        if (current) return { value: current.value as T, fetchedAt: current.fetchedAt };
+        throw err;
+      }
     }
 
     const run = (async (): Promise<Stored> => {
@@ -87,27 +92,16 @@ export class TtlCache {
 }
 
 // Liveness: the current GW has a fixture that has started and is not finished.
-// Recomputed at most once per minute from whatever fixtures are already cached.
+// Read the latest cached fixtures, including data loaded during this request.
 export class Liveness {
-  private lastComputed = 0;
-  private cached = false;
-
   constructor(
     private readonly getFixtures: () => FplFixture[] | undefined,
     private readonly getCurrentEvent: () => number | null
   ) {}
 
   isLive(): boolean {
-    const now = Date.now();
-    if (now - this.lastComputed < MINUTE) return this.cached;
-    this.lastComputed = now;
     const fixtures = this.getFixtures();
     const event = this.getCurrentEvent();
-    if (!fixtures || event === null) {
-      this.cached = false;
-      return false;
-    }
-    this.cached = fixtures.some((f) => f.event === event && f.started && !f.finished);
-    return this.cached;
+    return fixtures?.some((f) => f.event === event && f.started && !f.finished) ?? false;
   }
 }

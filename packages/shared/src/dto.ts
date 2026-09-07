@@ -83,6 +83,7 @@ export interface ElementDto {
   redCards: number;
   saves: number;
   defensiveContribution: number;
+  defconsPerGame?: number | null;
   ictIndex: number;
   xg: number;
   xa: number;

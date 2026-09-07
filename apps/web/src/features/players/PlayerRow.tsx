@@ -20,6 +20,8 @@ function statusDot(status: string): string | null {
 
 function metric(el: ElementDto, key: SortKey): string {
   switch (key) {
+    case 'defconsPerGame':
+      return el.defconsPerGame != null ? el.defconsPerGame.toFixed(1) : '—';
     case 'nowCost':
       return `£${formatPrice(el.nowCost)}`;
     case 'selectedByPercent':

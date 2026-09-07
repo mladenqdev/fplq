@@ -65,16 +65,16 @@ export default function LiveHeaderCard({ data, event }: Props) {
       <div className="mt-4 rounded-xl border border-line bg-surface/60 p-3">
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase tracking-wide text-faint">Overall rank</span>
+            <span className="text-[10px] uppercase tracking-wide text-faint">Live rank</span>
             <div className="num flex items-baseline gap-2 text-2xl font-bold text-fg">
               {formatRank(official.overallRank)}
               <RankDelta current={official.overallRank} previous={previous.overallRank} />
             </div>
           </div>
           <div className="text-right">
-            <span className="text-[10px] uppercase tracking-wide text-faint">GW rank</span>
+            <span className="text-[10px] uppercase tracking-wide text-faint">GW start rank</span>
             <div className="num text-lg font-semibold text-fg">
-              {official.eventRank != null ? formatRank(official.eventRank) : '—'}
+              {previous.overallRank != null ? formatRank(previous.overallRank) : '—'}
             </div>
           </div>
         </div>

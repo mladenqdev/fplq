@@ -4,7 +4,7 @@ import PlayerPhoto from '../../components/PlayerPhoto';
 import FixtureStrip from '../../components/FixtureStrip';
 import { Spinner } from '../../components/states';
 import type { BootstrapIndex } from '../../lib/bootstrap-index';
-import { useElement } from '../../lib/queries';
+import { useElement, usePlayerDefcons } from '../../lib/queries';
 import { teamFixtures, type TeamFixtureItem } from '../../lib/team-fixtures';
 
 interface Props {
@@ -32,6 +32,8 @@ export default function PlayerDetailSheet({
   onClose,
 }: Props) {
   const summaryQ = useElement(element?.id ?? null);
+  const defconsQ = usePlayerDefcons(element != null);
+  const defcons = element ? defconsQ.data?.players[element.id] : undefined;
   const strip =
     element && nextEvent != null ? teamFixtures(fixtureIndex, element.team, nextEvent, 5) : [];
   const last5 = summaryQ.data ? [...summaryQ.data.history].slice(-5).reverse() : [];
@@ -70,6 +72,23 @@ export default function PlayerDetailSheet({
             <Stat label="Goals" value={element.goalsScored} />
             <Stat label="Assist" value={element.assists} />
             <Stat label="xGI/90" value={element.xgi90.toFixed(2)} />
+          </div>
+
+          <div className="rounded-xl border border-line p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <Stat label="Defcons total" value={element.defensiveContribution} />
+              <Stat
+                label="Defcons / game"
+                value={defcons?.perGame != null ? defcons.perGame.toFixed(1) : '—'}
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-muted">
+              {defcons ? `${defcons.appearances} appearances. ` : ''}
+              Defensive actions, not FPL points.{' '}
+              {element.elementType === 1
+                ? 'Goalkeepers do not earn defensive contribution points.'
+                : `Reach ${element.elementType === 2 ? 10 : 12} in a match to earn 2 FPL points.`}
+            </p>
           </div>
 
           <div className="flex items-center justify-between rounded-lg bg-surface2 px-3 py-2">
@@ -119,13 +138,16 @@ export default function PlayerDetailSheet({
               <ul className="divide-y divide-line rounded-lg border border-line">
                 {last5.map((h) => (
                   <li
-                    key={h.round}
+                    key={h.fixture}
                     className="grid grid-cols-[2rem_1fr_auto] items-center gap-2 px-3 py-2"
                   >
                     <span className="num text-xs text-faint">GW{h.round}</span>
                     <span className="text-sm">
                       {index.teamShort(h.opponent_team)} ({h.was_home ? 'H' : 'A'}) ·{' '}
                       <span className="num text-muted">{h.minutes}&apos;</span>
+                      <span className="num block text-[11px] text-muted">
+                        {h.defensive_contribution ?? '—'} Defcons
+                      </span>
                     </span>
                     <span className="num text-sm font-semibold">{h.total_points}</span>
                   </li>

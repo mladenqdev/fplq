@@ -1,8 +1,8 @@
 # fplq
 
-A personal Fantasy Premier League PWA. It adds what the official app lacks: live
+A personal Fantasy Premier League PWA. It combines live
 overall rank with a trajectory chart, a 5 gameweek transfer planner, a fixture ticker,
-and a player explorer. Mobile first, free hosting friendly.
+and side-by-side player comparison. Mobile first, free hosting friendly.
 
 The full spec and domain rules live in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -16,9 +16,7 @@ pnpm workspaces monorepo, TypeScript strict, ESM only.
 - `apps/api` (`@fplq/api`) — Hono + `@hono/node-server`. Proxies and caches the FPL
   API, computes the derived payloads, and samples rank history into SQLite
   (`node:sqlite`). Port 8787.
-- `apps/web` (`@fplq/web`) — Vite + React 19 + Tailwind v4, currently a minimal
-  placeholder (renders `fplq` and calls `/api/health`) with all UI dependencies
-  installed. Port 5173, dev proxy `/api` -> `http://localhost:8787`.
+- `apps/web` (`@fplq/web`) — Vite + React 19 + Tailwind v4. Live rank, transfer planner, fixtures, comparison and settings, with an installable PWA shell. Port 5173, dev proxy `/api` -> `http://localhost:8787`.
 
 ## Requirements
 
@@ -48,6 +46,7 @@ pnpm --filter @fplq/web dev
 - `pnpm check` — `tsc --noEmit` in every package.
 - `pnpm test` — run the vitest suites.
 - `pnpm build` — build every package.
+- `pnpm deploy` — build web assets and deploy the Cloudflare Worker/API. Does not commit or push Git changes.
 - `pnpm format` / `pnpm format:check` — Prettier.
 
 ## Environment
@@ -79,3 +78,13 @@ doc for the full route table and DTOs. Quick check once running:
 curl -s http://localhost:8787/api/health
 curl -s http://localhost:8787/api/entry/1965441/live/1
 ```
+
+## Current product
+
+Production: https://fplq.fplq.workers.dev. One Cloudflare Worker serves the app and API, with rank history in D1; local development uses SQLite.
+
+- Live rank compared with the overall rank at the start of the GW.
+- Five-GW planner with a permanent candidate panel, unrestricted budget exploration, stable replacement slots, direct revert, Undo/Redo and explicit metric sorting.
+- Dedicated two-player comparison with mobile pickers, grouped stats, Defcons per appearance and upcoming fixtures. Full individual stats remain available from the planner.
+
+See [status and handoff](docs/STATUS.md) for deployment details and current limitations.

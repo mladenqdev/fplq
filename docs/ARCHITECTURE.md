@@ -1,6 +1,6 @@
 # fplq architecture and spec
 
-Personal Fantasy Premier League PWA. Mobile first. Features the official app lacks: live overall rank with trajectory, a 5 gameweek transfer planner, fixture ticker, player explorer. Personal use first, public later without redesign. Hosting must be free tier.
+Personal Fantasy Premier League PWA. Mobile first. Live overall rank with trajectory, a 5 gameweek transfer planner, fixture ticker, and dedicated player comparison. FPL itself also provides real-time rankings in 2026/27. Personal use first, public later without redesign. Hosting must be free tier.
 
 This document is the source of truth for everyone (humans and agents) working on the repo. Keep it updated when the contract changes.
 
@@ -98,7 +98,7 @@ All routes under `/api`. JSON, compressed. Every response includes `fetchedAt` (
 | ------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /api/health`                     |                                                 |                                                                              | `{ ok: true, live: boolean, currentEvent, uptimeSec }`                                                                                                                                                                                    |
 | `GET /api/bootstrap`                  | bootstrap-static                                | 2 min / 10 min                                                               | `BootstrapDto` (slimmed, see below)                                                                                                                                                                                                       |
-| `GET /api/fixtures`                   | fixtures/                                       | 2 min / 10 min                                                               | `FixtureDto[]` without stats                                                                                                                                                                                                              |
+| `GET /api/fixtures`                   | fixtures/                                       | 60 s / 60 s                                                                  | `FixtureDto[]` without stats                                                                                                                                                                                                              |
 | `GET /api/fixtures/:gw`               | fixtures/?event                                 | 45 s / 10 min (immutable once all finished and bootstrap event data_checked) | `FixtureDto[]` with `stats` and derived `provisionalBonus: {element, bonus}[]` per fixture                                                                                                                                                |
 | `GET /api/live/:gw`                   | event/{gw}/live                                 | 45 s / 10 min                                                                | `{ event, fetchedAt, elements: Record<id, LiveElementDto> }`                                                                                                                                                                              |
 | `GET /api/event-status`               | event-status                                    | 60 s / 10 min                                                                | raw status                                                                                                                                                                                                                                |
@@ -146,17 +146,21 @@ DTOs (exact TypeScript lives in `packages/shared/src/dto.ts`):
   ```
 - `SquadDto`: `{ fetchedAt, entryId, baseEvent, nextEvent, bank, freeTransfers, chipsUsed: {name, event}[], players: { element, position, purchasePrice, sellingPrice, nowCost }[], activeChipBase }`
 
+Runtime freshness: the Worker reuses its AppContext within an isolate for the same DB binding and tracked-entry configuration. Liveness reads warmed cached fixtures directly, avoiding a stale false result before kickoff. Fixtures refresh every 60 seconds even while idle; health warms bootstrap and fixtures. Concurrent failed refresh callers can all receive the existing stale value. Caches are not shared across isolates.
+
+Web polling: bootstrap and rank ladder every two minutes, fixtures every minute, rank history every minute while a GW is progressing and every five minutes otherwise. The rank chart exposes loading/error/retry/empty states, last check/sample times, and uses actual elapsed time on the x-axis. History from another GW is not used as placeholder data.
+
 Rank sampler: a scheduler in the API process. Tracked entries = `FPLQ_TRACKED_ENTRIES` plus any entry requested via `/api/entry/:id/live/:gw` in the last 24 h (cap 50). While live: sample every 60 s (one `entry/{id}` request per tracked entry, shared with the cache). While idle: every 15 min. Store rows `(entry, event, t, overall_rank, overall_points, event_points, event_rank)` in SQLite (`node:sqlite`), skip writing when nothing changed since the last sample. Store behind a `RankStore` interface (`append`, `list(entry, event)`), implementation `SqliteRankStore` (file path from env, create dir). Keep the FPL client in one module (`fplClient.ts`) with a single fetch wrapper (UA header, timeout 10 s, retry once on 5xx/network, JSON parse). Concurrency: dedupe in-flight upstream requests for the same URL.
 
 ## 5. Web app (`apps/web`)
 
-Mobile first, dark theme by default with a light theme following the system (class strategy with a toggle in Settings). Bottom tab bar: Live, Planner, Fixtures, Players, plus a gear for Settings. Top bar: app name, current GW, deadline countdown to the next GW ("2d 4h"). First run: if no entry id stored, show a small screen asking for it (default from `VITE_DEFAULT_ENTRY_ID`), store in `localStorage` key `fplq.entryId`.
+Mobile first, dark theme by default with a light theme following the system (class strategy with a toggle in Settings). Bottom tab bar: Live, Planner, Fixtures, Compare, plus a gear for Settings. Top bar: app name, current GW, deadline countdown to the next GW ("2d 4h"). First run: if no entry id stored, show a small screen asking for it (default from `VITE_DEFAULT_ENTRY_ID`), store in `localStorage` key `fplq.entryId`.
 
 Data layer: TanStack Query with a thin typed client (`api.ts`) over `/api`. `staleTime` mirrors the API TTLs; during live (per `EntryLiveDto.isLive` or `/api/health`) the Live tab refetches every 60 s, also on window focus. Show the data freshness ("updated 12 s ago") in the Live header.
 
 ### Live tab (`/`)
 
-1. Header card: live GW points (official), overall rank with arrow and delta vs `previous.overallRank` (green up, red down), GW rank, GW average and highest, chip badge, hits, freshness. Rank formatting: `794,510`; compact `795k` where tight.
+1. Header card: live GW points (official), overall rank with arrow and delta vs `previous.overallRank` (green up, red down), GW start rank from `previous.overallRank` (not the weekly-only `eventRank`), GW average and highest, chip badge, hits, freshness. Rank formatting: `794,510`; compact `795k` where tight.
 2. Rank trajectory: line chart of `overallRank` samples for this GW (y inverted: lower rank is higher on screen), x = time; show "no samples yet" gracefully. Use the rank-history endpoint.
 3. Rank ladder: compact list of rungs (top 10k, 50k, 100k, ...) with the points at each rung and the gap from the user's overall points (`+3 to reach 500k`, or `you are above`). Highlight the nearest rungs.
 4. Pitch: XI in formation rows plus bench row. Each player chip: web name, opponent short (H/A), points (bold), provisional bonus marker (e.g. `+2b` in amber when not confirmed), captain/vice badge, minutes state (dot: grey not started, green live, done finished), injury/doubt flag from bootstrap status, auto-sub arrows. Tap opens a bottom sheet with the explain breakdown and fixtures.
@@ -165,15 +169,32 @@ Data layer: TanStack Query with a thin typed client (`api.ts`) over `/api`. `sta
 
 ### Planner tab (`/planner`)
 
-Starting point from `/api/entry/:id/squad`. Horizon 5 GWs from `nextEvent`. Layout: a horizontally scrollable GW header (GW number, deadline date, FT available, hits, bank after transfers, chip selector) and a squad table grouped by position: name, club, selling price, then one cell per GW with opponent and FDR color. Tapping a cell (player x GW) opens the transfer sheet: list of candidates for that position (search, sort by ep_next, total points, form, price, ownership; filter by max price derived from bank + selling price), each row shows price, ep_next, ownership, price change % with projection arrow, next 5 fixtures strip, news. Selecting makes a transfer in that GW. Transfers are listed under each GW with a remove button. Chips per GW with availability checks. Validity problems shown inline. Reset plan. All state in localStorage via a small store (zustand or useReducer + effect; choose zustand for simplicity). Everything derived via `@fplq/shared` planner functions.
+Starting point from `/api/entry/:id/squad`, with five future gameweeks. A compact GW selector and summary show estimated points, bank (including negative values), free transfers, moves, hits and chip selection. The pitch and a permanent candidate panel share the desktop layout; mobile stacks them and keeps a compact lineup visible during selection. The fixture overview remains available below.
+
+- Choose an outgoing player on the pitch or choose an incoming candidate first. Candidates are not restricted to the available budget. Over-budget plans show the shortfall.
+- The hover × removes a player into a temporary positional placeholder. Touch devices expose the control without hover. A red × restores the pending removal or reverts a completed transfer. Pending empty slots are UI state, not persisted transfers; they clear on GW changes/reset. Bank and projected totals derive from completed transfers.
+- Completed transfers retain the original player's pitch or bench slot, including across subsequent GWs; Free Hit slot changes revert after that GW. Initial XI selection uses projections. A transfer does not trigger automatic promotion from the bench or reorder a formation row.
+- Repeated replacements of the same slot in one GW collapse into a single transfer (A → B → C becomes A → C); returning to A removes it.
+- Undo/Redo keep up to 50 in-memory plan snapshots. Completed plan changes persist in `localStorage` under `fplq.plan.{entryId}`. Reset clears the five-GW plan and is undoable. These actions never submit transfers to FPL.
+- Candidate controls explicitly say **Sort by** with **Lowest first / Highest first**. The selected metric controls both ordering and the displayed value. Price defaults ascending, other metrics descending; users can reverse the direction. Missing values remain last. Price and ownership are not repeated on a card when selected. Changing filters/sort scrolls candidates to the top.
+- Candidate **View player stats** opens the detail sheet, including history, fixtures and Defcons. The pitch offers This GW / Next 3 GWs fixture display.
+- List `xPts` is FPL `ep_next`. Pitch `proj` uses `projection.ts`: max of positive epNext, epThis, pointsPerGame and form, clamped to 15, scaled by availability and fixture difficulty. This is a rough estimate, not a calibrated prediction. Team totals include captain doubling (tripling for Triple Captain), all bench points for Bench Boost, and subtract transfer hits. Captain selection is automatic.
 
 ### Fixtures tab (`/fixtures`)
 
 FDR ticker: rows teams, columns next N GWs (5, toggle to 8, starting at next GW), cell opponent short name with H/A and difficulty color; sort by ticker score; blanks and doubles visible. Tap a GW header to show kickoff list for that GW.
 
-### Players tab (`/players`)
+### Compare tab (`/players`)
 
-List with sticky filter bar: position, team, max price, search; sort by points, form, ep_next, price, ownership, xGI/90, minutes, price change %. Virtualize if needed (600 rows; simple windowing or `content-visibility` is fine). Tap opens detail sheet: photo, status/news, season stats, last 5 GW rows (from `/api/element/:id` history), next 5 fixtures, price projection.
+The existing URL now opens a dedicated two-player comparison. Two selection cards are visible immediately; each opens a searchable bottom sheet with position filters. The other selected player is excluded. Selecting two players displays grouped statistics and the next three GWs side by side without an extra Compare action. Cards stay visible while scrolling and allow replacing either player; Clear empties both. Selection is page-local and resets on navigation/reload.
+
+Groups: Form & points, Attack, Minutes & value, Defence. Stronger values are highlighted, ties neutral; lower price and xGC/90 are preferred. Ownership is informational and has no winner highlight. Cross-position comparisons are allowed with explanatory text. Defcons/game loading and failure/retry states are explicit. At 390px phone width the comparison table has no horizontal overflow. The planner retains player browsing and detailed stats.
+
+### Defensive contributions per appearance
+
+`GET /api/players/defcons` returns `{ players: Record<id, { appearances, total, perGame: number | null }> }`. `builders/defcons.ts` aggregates past-deadline event live feeds. A fixture counts as an appearance only when its `explain.stats` contains positive minutes, including substitutes and counting both matches in a double GW. Divide the matched defensive-contribution total by those appearances, not starts or minutes/90. No appearances means null. The client enriches optional `ElementDto.defconsPerGame` from this endpoint.
+
+Fetch events in batches of four and cache compact per-event aggregates (checked events 24 hours; ongoing events use live TTL). An uncached failed event fails the response instead of returning a misleading partial average. Existing paired totals/appearances may be served stale on upstream failure. The client refreshes every two minutes while enabled.
 
 ### Settings (`/settings`)
 
@@ -195,7 +216,16 @@ Clean, dense but readable on a phone, one accent color (green `#00ff87`-like FPL
 - Small files, one component per file, colocate hooks.
 - Commit messages lowercase, short. Never commit or push without Mladen's go-ahead.
 
-## 7. Free hosting plan (later)
+## 7. Hosting (DEPLOYED)
 
-- Web: Cloudflare Pages (or Vercel/Netlify free). Needs HTTPS for PWA install on iPhone.
-- API: Cloudflare Workers free tier (Hono runs there; swap `node:sqlite` for D1 via `RankStore`, scheduler via Cron Triggers) if the FPL API accepts Worker egress; otherwise Render free web service or an Oracle Always Free VM. Keep the Node build host agnostic: no filesystem assumptions outside `FPLQ_DB_PATH`.
+Live at **https://fplq.fplq.workers.dev** — ONE Cloudflare Worker serves both halves (the chess-cheat-metrics pattern):
+- `apps/api/wrangler.toml`: worker `fplq`, `main = src/worker.ts`. `[assets] directory = "../web/dist"`, `binding = "ASSETS"`, `not_found_handling = "single-page-application"` (SPA fallback). D1 binding `DB` (database `fplq`), `[triggers] crons = ["* * * * *"]`.
+- `src/worker.ts`: `fetch` routes `/api/*` to the Hono app, everything else to `env.ASSETS.fetch` (same origin -> no CORS). `scheduled` runs the rank sampler (every minute while live, 15-min marks when idle).
+- Rank history in D1 via `D1RankStore` (Node dev still uses `SqliteRankStore`); both behind the `RankStore` interface. The sampler core is shared (`src/sample.ts`).
+- Web is same-origin: `apps/web/src/lib/api.ts` uses `import.meta.env.VITE_API_BASE ?? ''` (empty in prod).
+- One-command deploy: `pnpm deploy` (builds web, then `wrangler deploy` in apps/api).
+- Autodeploy: Cloudflare Workers Builds connected to the GitHub repo. Its **Deploy command must be `npx wrangler deploy -c apps/api/wrangler.toml`** (plain `npx wrangler deploy` fails from the workspace root: "application detection ... run in the root of a workspace"). Build command `pnpm install && pnpm --filter @fplq/web build`, root = repo root.
+
+Local dev is unchanged: `pnpm dev` runs the Node API (`src/index.ts`, port 8787, node:sqlite) + Vite web (5173, proxies /api). Vite binds IPv6 `localhost` — use `http://localhost:5173`, not `127.0.0.1`.
+
+Deployment workflow: commit reviewed changes, push to `main`, then verify the Cloudflare Workers Builds result. Use direct `pnpm deploy` only when explicitly requested as a manual deployment.

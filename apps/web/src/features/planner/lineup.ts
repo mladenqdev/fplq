@@ -1,4 +1,4 @@
-import type { DerivedGameweekPlayer } from '@fplq/shared';
+import type { ChipName, DerivedGameweekPlayer } from '@fplq/shared';
 
 export interface LineupPlayer extends DerivedGameweekPlayer {
   proj: number;
@@ -10,6 +10,20 @@ export interface Lineup {
   formation: string;
   xiElements: number[];
   captain: number | null;
+}
+
+export function projectedLineupTotal(
+  lineup: Lineup,
+  chip: ChipName | null,
+  hitCost: number
+): number {
+  const starters = Object.values(lineup.rows).flat();
+  const players = chip === 'bboost' ? [...starters, ...lineup.bench] : starters;
+  const total = players.reduce((sum, player) => {
+    const multiplier = player.element === lineup.captain ? (chip === '3xc' ? 3 : 2) : 1;
+    return sum + player.proj * multiplier;
+  }, 0);
+  return Math.round((total - hitCost) * 10) / 10;
 }
 
 // Valid XI: exactly 1 GK, 3-5 DEF, 2-5 MID, 1-3 FWD, 11 total (season rules, ARCHITECTURE
@@ -86,6 +100,36 @@ export function buildLineup(
     bench,
     formation: `${rowDef.length}-${rowMid.length}-${rowFwd.length}`,
     xiElements,
+    captain,
+  };
+}
+
+// Transfers inherit the original pitch/bench slot, regardless of their projection.
+export function fillLineupSlots(
+  reference: Lineup,
+  players: LineupPlayer[],
+  slots: Map<number, number>
+): Lineup {
+  const byId = new Map(players.map((p) => [p.element, p]));
+  const fill = (row: LineupPlayer[]) =>
+    row.flatMap((p) => {
+      const replacement = byId.get(slots.get(p.element) ?? p.element);
+      return replacement ? [replacement] : [];
+    });
+  const rows = Object.fromEntries(
+    Object.entries(reference.rows).map(([type, row]) => [type, fill(row)])
+  );
+  const starters = Object.values(rows).flat();
+  const captain =
+    starters.reduce<LineupPlayer | null>(
+      (best, p) => (!best || p.proj > best.proj ? p : best),
+      null
+    )?.element ?? null;
+  return {
+    rows,
+    bench: fill(reference.bench),
+    formation: reference.formation,
+    xiElements: starters.map((p) => p.element),
     captain,
   };
 }

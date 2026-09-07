@@ -2,6 +2,7 @@ import type { ElementDto } from '@fplq/shared';
 
 export type SortKey =
   | 'totalPoints'
+  | 'defconsPerGame'
   | 'form'
   | 'epNext'
   | 'nowCost'
@@ -12,6 +13,7 @@ export type SortKey =
 
 export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: 'totalPoints', label: 'Points' },
+  { key: 'defconsPerGame', label: 'Defcons / game' },
   { key: 'form', label: 'Form' },
   { key: 'epNext', label: 'xPts' },
   { key: 'nowCost', label: 'Price' },
@@ -22,5 +24,5 @@ export const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ];
 
 export function sortValue(el: ElementDto, key: SortKey): number {
-  return el[key];
+  return el[key] ?? -1;
 }

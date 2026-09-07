@@ -27,7 +27,7 @@ export default function LivePage() {
 
   const liveQ = useEntryLive(entryId, gw);
   const live = liveQ.data?.isLive ?? healthQ.data?.live ?? false;
-  const rankQ = useRankHistory(entryId, gw, live);
+  const rankQ = useRankHistory(entryId, gw, live || !liveQ.data?.gwFinished);
   const ladderQ = useLadder();
 
   const [selected, setSelected] = useState<EntryLivePickDto | null>(null);
@@ -53,7 +53,16 @@ export default function LivePage() {
     <div className="space-y-3 py-3 fade-in">
       <LiveHeaderCard data={data} event={event} />
 
-      {rankQ.data && <RankTrajectory samples={rankQ.data.samples} />}
+      <RankTrajectory
+        samples={rankQ.data?.samples ?? []}
+        loading={rankQ.isPending}
+        refreshing={rankQ.isFetching}
+        error={rankQ.isError}
+        checkedAt={rankQ.dataUpdatedAt}
+        onRefresh={() => {
+          void rankQ.refetch();
+        }}
+      />
 
       {ladderQ.data && (
         <RankLadder

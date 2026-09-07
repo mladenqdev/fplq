@@ -9,7 +9,6 @@ import { chipLabel } from '../../lib/labels';
 import { formatShortDate } from '../../lib/time';
 
 const CHIP_OPTIONS: ChipName[] = ['wildcard', 'freehit', 'bboost', '3xc'];
-
 interface Props {
   gw: DerivedGameweek;
   total: number;
@@ -21,93 +20,95 @@ interface Props {
 
 export default function GwHeader({ gw, total, index, ctx, onSetChip, onRemoveTransfer }: Props) {
   const event = index.eventById.get(gw.event);
-
+  const problems = gw.problems.filter((p) => p !== 'Negative bank');
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-surface p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold">GW{gw.event}</span>
-            <span className="text-[11px] text-faint">
-              {event ? formatShortDate(event.deadlineTime) : ''}
-            </span>
-          </div>
-          <div className="mt-0.5 flex items-baseline gap-1">
-            <span className="num text-2xl font-black text-accent">{total.toFixed(1)}</span>
-            <span className="text-xs text-muted">proj pts</span>
-            <span className="ml-1 rounded bg-surface2 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-faint">
-              est.
-            </span>
-          </div>
+    <div className="space-y-2 rounded-xl border border-line bg-surface p-3">
+      <div className="flex flex-wrap items-center gap-3 lg:gap-6">
+        <div className="flex-1 lg:flex-none">
+          <span className="text-base font-bold">GW{gw.event}</span>
+          <span className="ml-2 text-[11px] text-faint">
+            {event ? formatShortDate(event.deadlineTime) : ''}
+          </span>
         </div>
-
         <select
+          aria-label="Gameweek chip"
           value={gw.chip ?? ''}
           onChange={(e) => onSetChip(gw.event, (e.target.value || null) as ChipName | null)}
-          className="shrink-0 rounded-lg border border-line bg-bg px-2 py-1.5 text-xs outline-none"
+          className="rounded-lg border border-line bg-bg px-2 py-2 text-xs lg:order-last lg:ml-auto"
         >
           <option value="">No chip</option>
-          {CHIP_OPTIONS.map((chip) => {
-            const available = ctx.isChipAvailable(chip, gw.event);
-            if (!available && gw.chip !== chip) return null;
-            return (
-              <option key={chip} value={chip}>
-                {chipLabel(chip)}
-              </option>
-            );
-          })}
+          {CHIP_OPTIONS.filter(
+            (chip) => ctx.isChipAvailable(chip, gw.event) || gw.chip === chip
+          ).map((chip) => (
+            <option key={chip} value={chip}>
+              {chipLabel(chip)}
+            </option>
+          ))}
         </select>
+        <div className="num grid w-full grid-cols-5 gap-2 text-center lg:w-auto lg:min-w-[28rem] lg:flex-1">
+          <Stat label="Est. points" value={total.toFixed(1)} accent />
+          <Stat
+            label={gw.bank < 0 ? 'Over budget' : 'Bank'}
+            value={`${gw.bank < 0 ? '−' : ''}£${formatPrice(Math.abs(gw.bank))}`}
+            bad={gw.bank < 0}
+          />
+          <Stat label="Free moves" value={String(gw.freeTransfers)} />
+          <Stat label="Transfers" value={String(gw.transfersMade)} />
+          <Stat label="Hit" value={gw.hitCost > 0 ? `−${gw.hitCost}` : '0'} bad={gw.hitCost > 0} />
+        </div>
       </div>
-
-      <div className="num grid grid-cols-4 gap-2 text-center text-xs">
-        <Stat label="Bank" value={`£${formatPrice(gw.bank)}`} bad={gw.bank < 0} />
-        <Stat label="FT" value={String(gw.freeTransfers)} />
-        <Stat label="Moves" value={String(gw.transfersMade)} />
-        <Stat label="Hit" value={gw.hitCost > 0 ? `−${gw.hitCost}` : '0'} bad={gw.hitCost > 0} />
-      </div>
-
       {gw.transfers.length > 0 && (
-        <ul className="space-y-1">
-          {gw.transfers.map((t, i) => (
-            <li
-              key={i}
-              className="flex items-center justify-between gap-1 rounded-lg bg-surface2 px-2 py-1 text-[11px]"
-            >
-              <span className="min-w-0 truncate">
-                <span className="text-down">{index.elementById.get(t.out)?.webName ?? t.out}</span>
-                {' → '}
-                <span className="text-up">{index.elementById.get(t.in)?.webName ?? t.in}</span>
-              </span>
-              <button
-                onClick={() => onRemoveTransfer(gw.event, i)}
-                className="shrink-0 text-faint active:text-down"
-                aria-label="Remove transfer"
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+        <details className="text-xs">
+          <summary className="cursor-pointer py-1 text-muted">
+            {gw.transfers.length} planned {gw.transfers.length === 1 ? 'transfer' : 'transfers'}
+          </summary>
+          <ul className="mt-1 flex flex-wrap gap-2">
+            {gw.transfers.map((t, i) => (
+              <li key={i} className="flex items-center gap-2 rounded-lg bg-surface2 px-2 py-1">
+                <span>
+                  {index.elementById.get(t.out)?.webName ?? t.out} →{' '}
+                  {index.elementById.get(t.in)?.webName ?? t.in}
+                </span>
+                <button
+                  onClick={() => onRemoveTransfer(gw.event, i)}
+                  className="px-2 py-1 text-down"
+                  aria-label={`Revert transfer to ${index.elementById.get(t.in)?.webName ?? t.in}`}
+                >
+                  ↶ Revert
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
-
-      {gw.problems.length > 0 && (
-        <ul className="space-y-0.5">
-          {gw.problems.map((p, i) => (
-            <li key={i} className="text-[11px] leading-tight text-down">
-              {p}
-            </li>
-          ))}
-        </ul>
-      )}
+      {problems.map((problem, i) => (
+        <p key={i} className="text-xs text-down">
+          {problem}
+        </p>
+      ))}
     </div>
   );
 }
 
-function Stat({ label, value, bad = false }: { label: string; value: string; bad?: boolean }) {
+function Stat({
+  label,
+  value,
+  bad = false,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  bad?: boolean;
+  accent?: boolean;
+}) {
   return (
-    <div className="rounded-lg bg-surface2 py-1.5">
+    <div>
       <div className="text-[9px] uppercase tracking-wide text-faint">{label}</div>
-      <div className={`font-bold ${bad ? 'text-down' : 'text-fg'}`}>{value}</div>
+      <div
+        className={`text-sm font-bold ${bad ? 'text-down' : accent ? 'text-accent' : 'text-fg'}`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

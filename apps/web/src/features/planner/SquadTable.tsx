@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { fdrBand, fdrColor, formatPrice, type DerivedGameweek } from '@fplq/shared';
 import type { BootstrapIndex } from '../../lib/bootstrap-index';
-import type { TransferTarget } from './TransferSheet';
+import type { TransferTarget } from './TransferPanel';
 
 const TYPE_LABEL: Record<number, string> = {
   1: 'Goalkeepers',

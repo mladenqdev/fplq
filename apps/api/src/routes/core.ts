@@ -8,7 +8,7 @@ export function registerCoreRoutes(app: Hono, ctx: AppContext, startedAt: number
   app.get('/api/health', async (c) => {
     let currentEvent: number | null = null;
     try {
-      const bootstrap = await ctx.getBootstrap();
+      const [bootstrap] = await Promise.all([ctx.getBootstrap(), ctx.getFixtures()]);
       currentEvent = currentEventId(bootstrap.value);
     } catch {
       // health stays up even when the upstream is unreachable
