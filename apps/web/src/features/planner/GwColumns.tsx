@@ -5,6 +5,7 @@ import {
   type PlannerContext,
 } from '@fplq/shared';
 import type { BootstrapIndex } from '../../lib/bootstrap-index';
+import SelectChevron from '../../components/SelectChevron';
 import { chipLabel } from '../../lib/labels';
 import { formatShortDate } from '../../lib/time';
 
@@ -50,22 +51,25 @@ export default function GwColumns({ gameweeks, index, ctx, onSetChip, onRemoveTr
               </span>
             </div>
 
-            <select
-              value={gw.chip ?? ''}
-              onChange={(e) => onSetChip(gw.event, (e.target.value || null) as ChipName | null)}
-              className="mt-2 w-full rounded-lg border border-line bg-bg px-2 py-1.5 text-xs outline-none"
-            >
-              <option value="">No chip</option>
-              {CHIP_OPTIONS.map((chip) => {
-                const available = ctx.isChipAvailable(chip, gw.event);
-                if (!available && gw.chip !== chip) return null;
-                return (
-                  <option key={chip} value={chip}>
-                    {chipLabel(chip)}
-                  </option>
-                );
-              })}
-            </select>
+            <div className="relative mt-2">
+              <select
+                value={gw.chip ?? ''}
+                onChange={(e) => onSetChip(gw.event, (e.target.value || null) as ChipName | null)}
+                className="w-full appearance-none rounded-lg border border-line bg-bg py-1.5 pl-2 pr-9 text-xs outline-none"
+              >
+                <option value="">No chip</option>
+                {CHIP_OPTIONS.map((chip) => {
+                  const available = ctx.isChipAvailable(chip, gw.event);
+                  if (!available && gw.chip !== chip) return null;
+                  return (
+                    <option key={chip} value={chip}>
+                      {chipLabel(chip)}
+                    </option>
+                  );
+                })}
+              </select>
+              <SelectChevron />
+            </div>
 
             {gw.transfers.length > 0 && (
               <ul className="mt-2 space-y-1">

@@ -9,4 +9,5 @@ export * from './prices';
 export * from './planner';
 export * from './fdr';
 export * from './projection';
+export * from './recent';
 export * from './format';

@@ -20,8 +20,8 @@ describe('projectNextFt (rule 3.6 forward roll)', () => {
   it('caps at the maximum bank of 5', () => {
     expect(projectNextFt(5, 0, false)).toBe(5);
   });
-  it('a transfer chip adds one without consuming', () => {
-    expect(projectNextFt(2, 5, true)).toBe(3);
+  it('a transfer chip retains the exact saved balance', () => {
+    expect(projectNextFt(2, 5, true)).toBe(2);
   });
 });
 
@@ -37,7 +37,7 @@ describe('freeTransfersByEvent (rule 3.6)', () => {
     expect(map.get(2)).toBe(1);
   });
 
-  it('rolls a transfer chip forward (+1) and consumes normal transfers', () => {
+  it('retains transfers through a chip week and consumes normal transfers', () => {
     const input: FtInput = {
       startedEvent: 1,
       history: [
@@ -51,8 +51,25 @@ describe('freeTransfersByEvent (rule 3.6)', () => {
     const map = freeTransfersByEvent(input);
     expect(map.get(2)).toBe(1); // 1 available, made 2 (a hit)
     expect(map.get(3)).toBe(1); // still 1, wildcard week
-    expect(map.get(4)).toBe(2); // wildcard banked +1
-    expect(map.get(5)).toBe(2);
+    expect(map.get(4)).toBe(1); // wildcard retains the exact saved balance
+    expect(map.get(5)).toBe(1);
+  });
+
+  it('matches a wildcard followed by a quiet gameweek', () => {
+    const input: FtInput = {
+      startedEvent: 1,
+      history: [
+        { event: 1, transfers: 0 },
+        { event: 2, transfers: 0 },
+        { event: 3, transfers: 0 },
+        { event: 4, transfers: 0 },
+      ],
+      chipEvents: [{ name: 'wildcard', event: 3 }],
+    };
+    const map = freeTransfersByEvent(input);
+    expect(map.get(3)).toBe(2);
+    expect(map.get(4)).toBe(2);
+    expect(map.get(5)).toBe(3);
   });
 
   it('banks up to the cap of 5 over quiet gameweeks', () => {

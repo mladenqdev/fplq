@@ -5,7 +5,7 @@ import BottomTabs from './BottomTabs';
 import { LoadingScreen } from './states';
 
 export default function AppShell() {
-  const planner = useLocation().pathname === '/planner';
+  const planner = ['/planner', '/transfers'].includes(useLocation().pathname);
   return (
     <div className="min-h-screen">
       <TopBar />

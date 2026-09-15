@@ -63,7 +63,7 @@ For each pick: `points = (official total_points from event live) + (provisional 
 
 ### 3.6 Free transfers
 
-GW1 is unlimited. For GW g >= 2: `ft(2) = 1`. For g > 2: if the entry played `wildcard` or `freehit` in g-1 then `ft(g) = min(5, ft(g-1) + 1)`; otherwise `ft(g) = min(5, max(ft(g-1) - transfersMade(g-1), 0) + 1)`. Entries that joined late start with 1 at their `started_event + 1`. Inputs: `history.current[]` (`event_transfers`) and `history.chips[]`.
+GW1 is unlimited. For GW g >= 2: `ft(2) = 1`. After a normal GW, `ft(g+1) = min(5, max(ft(g) - transfersMade(g), 0) + 1)`. If a Wildcard or Free Hit is played in g, the exact saved balance is retained: `ft(g+1) = ft(g)`. The chip week does not add another transfer. Entries that joined late start with 1 at their `started_event + 1`. Inputs: public `history.current[]` (`event_transfers`), `history.chips[]` and the current maximum from `game_settings`. The public entry API does not expose a ready-made available-transfer value; FPL's `/my-team` data requires an authenticated FPL session, which this app does not hold.
 
 ### 3.7 Purchase and selling price
 
@@ -154,7 +154,7 @@ Rank sampler: a scheduler in the API process. Tracked entries = `FPLQ_TRACKED_EN
 
 ## 5. Web app (`apps/web`)
 
-Mobile first, dark theme by default with a light theme following the system (class strategy with a toggle in Settings). Bottom tab bar: Live, Planner, Fixtures, Compare, plus a gear for Settings. Top bar: app name, current GW, deadline countdown to the next GW ("2d 4h"). First run: if no entry id stored, show a small screen asking for it (default from `VITE_DEFAULT_ENTRY_ID`), store in `localStorage` key `fplq.entryId`.
+Mobile first, dark theme by default with a light theme following the system (class strategy with a toggle in Settings). Bottom tab bar: Live, Transfers, Fixtures, Compare, plus a gear for Settings. Top bar: app name, current GW, deadline countdown to the next GW ("2d 4h"). First run: if no entry id stored, show a small screen asking for it (default from `VITE_DEFAULT_ENTRY_ID`), store in `localStorage` key `fplq.entryId`.
 
 Data layer: TanStack Query with a thin typed client (`api.ts`) over `/api`. `staleTime` mirrors the API TTLs; during live (per `EntryLiveDto.isLive` or `/api/health`) the Live tab refetches every 60 s, also on window focus. Show the data freshness ("updated 12 s ago") in the Live header.
 
@@ -167,9 +167,13 @@ Data layer: TanStack Query with a thin typed client (`api.ts`) over `/api`. `sta
 5. Points on bench and computed total vs official (small text).
 6. Mini-leagues: list of the entry's classic leagues with rank and movement (entry_rank vs entry_last_rank), tap to a simple standings page (`/league/:id`) using `/api/league/:id`.
 
-### Planner tab (`/planner`)
+### Transfers tab (`/transfers`)
 
-Starting point from `/api/entry/:id/squad`, with five future gameweeks. A compact GW selector and summary show estimated points, bank (including negative values), free transfers, moves, hits and chip selection. The pitch and a permanent candidate panel share the desktop layout; mobile stacks them and keeps a compact lineup visible during selection. The fixture overview remains available below.
+`/planner` redirects to this route so existing bookmarks continue to work. Starting point comes from `/api/entry/:id/squad`, with five future gameweeks. A compact GW selector and transfer summary show estimated points, bank (including negative values), the history-derived free-transfer balance, planned moves, hits and chip selection.
+
+The Transfer radar has four views: Ideas, Form, Prices and Squad. Ideas uses a separate conservative three/five-GW model with completed-match minutes, regressed xG/xA, clean-sheet and defensive-return estimates, optimal-XI impact, all incremental planned hits and future-plan validation. It can recommend holding rather than force a list of moves. `GET /api/players/recent` supplies finalized match observations; missing data pauses advice. Cards explain minutes, underlying rates, DC returns, fixtures and budget. See [the methodology and limitations](TRANSFER_IDEAS.md). Planning an idea is reversible through Undo or the red ×. Exploring a market or squad player scrolls to the builder with the correct incoming or outgoing state selected.
+
+The pitch and a permanent candidate panel share the desktop layout; mobile stacks them and keeps a compact lineup visible during selection. The fixture overview remains available below.
 
 - Choose an outgoing player on the pitch or choose an incoming candidate first. Candidates are not restricted to the available budget. Over-budget plans show the shortfall.
 - The hover × removes a player into a temporary positional placeholder. Touch devices expose the control without hover. A red × restores the pending removal or reverts a completed transfer. Pending empty slots are UI state, not persisted transfers; they clear on GW changes/reset. Bank and projected totals derive from completed transfers.
@@ -186,9 +190,9 @@ FDR ticker: rows teams, columns next N GWs (5, toggle to 8, starting at next GW)
 
 ### Compare tab (`/players`)
 
-The existing URL now opens a dedicated two-player comparison. Two selection cards are visible immediately; each opens a searchable bottom sheet with position filters. The other selected player is excluded. Selecting two players displays grouped statistics and the next three GWs side by side without an extra Compare action. Cards stay visible while scrolling and allow replacing either player; Clear empties both. Selection is page-local and resets on navigation/reload.
+The existing URL now opens a dedicated two-player comparison. Two selection cards are visible immediately; each opens a searchable top-anchored picker with position filters. On phones the picker occupies the dynamic viewport, freezes background scroll and keeps results visible when the keyboard reduces the available height. The other selected player is excluded. Selecting two players displays grouped statistics and the next three GWs side by side without an extra Compare action. Cards stay visible while scrolling and allow replacing either player; Clear empties both. Selection is page-local and resets on navigation/reload.
 
-Groups: Form & points, Attack, Minutes & value, Defence. Stronger values are highlighted, ties neutral; lower price and xGC/90 are preferred. Ownership is informational and has no winner highlight. Cross-position comparisons are allowed with explanatory text. Defcons/game loading and failure/retry states are explicit. At 390px phone width the comparison table has no horizontal overflow. The planner retains player browsing and detailed stats.
+Before both slots are filled, a player explorer replaces the old marketing empty state. It searches by player or club, filters by position and club, optionally keeps only players who have played, and ranks by points, xG, xA, xGI, Defcons or minutes per appearance. A distinct Highest first / Lowest first control changes direction; P1 and P2 buttons assign a player directly. Groups after selection: Form & points, Attack, Minutes & value, Defence. Stronger values are highlighted, ties neutral; lower price and xGC/90 are preferred. Ownership is informational and has no winner highlight. Cross-position comparisons are allowed with explanatory text. Defcons/game loading and failure/retry states are explicit. At 390px phone width the comparison table has no horizontal overflow. Transfers retains player browsing and detailed stats. Native select arrows are replaced by the shared padded chevron control throughout the app.
 
 ### Defensive contributions per appearance
 
@@ -219,6 +223,7 @@ Clean, dense but readable on a phone, one accent color (green `#00ff87`-like FPL
 ## 7. Hosting (DEPLOYED)
 
 Live at **https://fplq.fplq.workers.dev** — ONE Cloudflare Worker serves both halves (the chess-cheat-metrics pattern):
+
 - `apps/api/wrangler.toml`: worker `fplq`, `main = src/worker.ts`. `[assets] directory = "../web/dist"`, `binding = "ASSETS"`, `not_found_handling = "single-page-application"` (SPA fallback). D1 binding `DB` (database `fplq`), `[triggers] crons = ["* * * * *"]`.
 - `src/worker.ts`: `fetch` routes `/api/*` to the Hono app, everything else to `env.ASSETS.fetch` (same origin -> no CORS). `scheduled` runs the rank sampler (every minute while live, 15-min marks when idle).
 - Rank history in D1 via `D1RankStore` (Node dev still uses `SqliteRankStore`); both behind the `RankStore` interface. The sampler core is shared (`src/sample.ts`).

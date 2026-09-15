@@ -8,6 +8,7 @@ import BottomSheet from '../../components/BottomSheet';
 import PlayerPhoto from '../../components/PlayerPhoto';
 import FixtureStrip from '../../components/FixtureStrip';
 import { COMPARE_GROUPS, bestValue, displayValue } from './compare';
+import PlayerExplorer from './PlayerExplorer';
 
 export default function PlayersPage() {
   const bootstrapQ = useBootstrap();
@@ -17,7 +18,7 @@ export default function PlayersPage() {
   const [picking, setPicking] = useState<0 | 1 | null>(null);
   const [search, setSearch] = useState('');
   const [position, setPosition] = useState(0);
-  const defconsQ = usePlayerDefcons(ids.some((id) => id != null));
+  const defconsQ = usePlayerDefcons(true);
   const fixtureIndex = useMemo(() => buildTeamFixtureIndex(fixturesQ.data ?? []), [fixturesQ.data]);
   const players = ids.map((id) => {
     const el = id == null ? undefined : index?.elementById.get(id);
@@ -46,6 +47,13 @@ export default function PlayersPage() {
     setSearch('');
     setPosition(0);
     setPicking(slot);
+  };
+  const assignPlayer = (slot: 0 | 1, element: number) => {
+    setIds((current) => {
+      const other = slot === 0 ? 1 : 0;
+      if (current[other] === element) return current;
+      return slot === 0 ? [element, current[1]] : [current[0], element];
+    });
   };
 
   return (
@@ -95,22 +103,16 @@ export default function PlayersPage() {
         ))}
       </div>
       {chosen.length < 2 ? (
-        <div className="rounded-2xl border border-line bg-surface px-5 py-8 text-center">
-          <h2 className="text-base font-semibold">
-            {chosen.length
-              ? 'Who are you comparing them with?'
-              : 'Your next decision, side by side'}
-          </h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-            Compare points, form, Defcons per game, attacking returns and value.
-          </p>
-          <button
-            onClick={() => pick(ids[0] == null ? 0 : 1)}
-            className="mt-5 min-h-11 rounded-xl bg-brand px-5 text-sm font-semibold text-black"
-          >
-            {chosen.length ? 'Choose second player' : 'Choose first player'}
-          </button>
-        </div>
+        <PlayerExplorer
+          elements={bootstrapQ.data?.elements ?? []}
+          index={index}
+          selectedIds={ids}
+          appearances={defconsQ.data?.players}
+          appearancesPending={defconsQ.isPending}
+          appearancesError={defconsQ.isError}
+          onRetryAppearances={() => void defconsQ.refetch()}
+          onAssign={assignPlayer}
+        />
       ) : (
         <>
           {chosen.some((p) => p.news) && (
@@ -209,15 +211,20 @@ export default function PlayersPage() {
         open={picking != null}
         onClose={() => setPicking(null)}
         title={`Choose player ${(picking ?? 0) + 1}`}
+        placement="top"
+        contentClassName="flex flex-col"
       >
-        <div className="space-y-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
           <input
             autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search comparison players"
             placeholder="Search player name or club"
-            className="min-h-11 w-full rounded-xl border border-line bg-bg px-3 text-base outline-none focus:border-brand"
+            autoComplete="off"
+            enterKeyHint="search"
+            type="search"
+            className="min-h-11 shrink-0 w-full rounded-xl border border-line bg-bg px-3 text-base outline-none focus:border-brand"
           />
           <div
             className="flex gap-1"
@@ -235,15 +242,17 @@ export default function PlayersPage() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-muted">{candidates.length} players · most points first</p>
-          <div className="max-h-[45dvh] overflow-y-auto divide-y divide-line">
+          <p className="shrink-0 text-xs text-muted">
+            {candidates.length} players · most points first
+          </p>
+          <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain">
             {candidates.length ? (
               candidates.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => {
                     if (picking == null) return;
-                    setIds((prev) => (picking === 0 ? [p.id, prev[1]] : [prev[0], p.id]));
+                    assignPlayer(picking, p.id);
                     setPicking(null);
                   }}
                   aria-label={`Compare ${p.webName}`}

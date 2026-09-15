@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 import AppShell from './components/AppShell';
 import FirstRun from './features/onboarding/FirstRun';
 import { useEntryIdStore } from './stores/useEntryId';
@@ -17,7 +17,8 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <LivePage /> },
       { path: '/league/:id', element: <LeaguePage /> },
-      { path: '/planner', element: <PlannerPage /> },
+      { path: '/transfers', element: <PlannerPage /> },
+      { path: '/planner', element: <Navigate to="/transfers" replace /> },
       { path: '/fixtures', element: <FixturesPage /> },
       { path: '/players', element: <PlayersPage /> },
       { path: '/settings', element: <SettingsPage /> },

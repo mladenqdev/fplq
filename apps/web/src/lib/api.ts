@@ -7,6 +7,7 @@ import type {
   LadderDto,
   RankHistoryDto,
   SquadDto,
+  RecentPlayersDto,
 } from '@fplq/shared';
 
 export interface ApiError extends Error {
@@ -103,6 +104,7 @@ export interface ElementSummaryDto {
 }
 
 export const api = {
+  playerRecent: () => get<RecentPlayersDto>('/players/recent'),
   playerDefcons: () =>
     get<{
       players: Record<number, { appearances: number; total: number; perGame: number | null }>;

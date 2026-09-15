@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { derivePlan, projectPlayerPoints, type DerivedGameweek } from '@fplq/shared';
 import { useBootstrap, useFixtures, useSquad } from '../../lib/queries';
 import { useBootstrapIndex } from '../../lib/bootstrap-index';
@@ -14,6 +14,7 @@ import GwSelector from './GwSelector';
 import PlannerPitch from './PlannerPitch';
 import SquadTable from './SquadTable';
 import TransferPanel, { type TransferTarget } from './TransferPanel';
+import TransferInsights from './TransferInsights';
 
 export default function PlannerPage() {
   const entryId = useEntryId();
@@ -30,6 +31,7 @@ export default function PlannerPage() {
   const [incomingId, setIncomingId] = useState<number | null>(null);
   const [fixtureCount, setFixtureCount] = useState(1);
   const [removed, setRemoved] = useState<number[]>([]);
+  const planBuilderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (squadQ.data) sync(entryId, squadQ.data.baseEvent);
@@ -169,9 +171,9 @@ export default function PlannerPage() {
     <div className="space-y-3 py-3">
       <div className="flex items-center justify-between px-1">
         <div>
-          <h1 className="text-xl font-bold">Planner</h1>
+          <h1 className="text-xl font-bold">Transfers</h1>
           <p className="num text-xs text-faint">
-            From GW{plan.baseEvent} · {derived.horizon} GW horizon
+            GW{perGw[0]?.gw.event}–GW{perGw.at(-1)?.gw.event} plan
             {totalHits > 0 && <span className="text-down"> · −{totalHits} total hits</span>}
           </p>
         </div>
@@ -207,9 +209,9 @@ export default function PlannerPage() {
               setTarget(null);
               setIncomingId(null);
             }}
-            className="rounded-full bg-surface2 px-4 py-2 text-sm font-medium active:opacity-70"
+            className="rounded-lg bg-surface2 px-3 py-2 text-xs font-medium active:opacity-70"
           >
-            Reset
+            Clear plan
           </button>
         </div>
       </div>
@@ -234,81 +236,120 @@ export default function PlannerPage() {
         onRemoveTransfer={removeTransfer}
       />
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(20rem,1fr)]">
-        <div
-          className={`${activeTarget || incoming ? 'sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 bg-bg' : ''} lg:sticky lg:top-[calc(env(safe-area-inset-top)+4rem)]`}
-        >
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="flex gap-1 rounded-lg bg-surface2 p-1">
-              {[1, 3].map((count) => (
-                <button
-                  key={count}
-                  onClick={() => setFixtureCount(count)}
-                  aria-pressed={fixtureCount === count}
-                  className={`rounded-md px-3 py-1 text-xs ${fixtureCount === count ? 'bg-brand text-black' : 'text-muted'}`}
-                >
-                  {count === 1 ? 'This GW' : 'Next 3 GWs'}
-                </button>
-              ))}
-            </div>
-            <span className="text-[10px] text-faint">× to remove · red × to restore</span>
+      <TransferInsights
+        plan={plan}
+        ctx={ctx}
+        gw={activeVm.gw}
+        index={index}
+        fixtureIndex={fixtureIndex}
+        onPlanTransfer={(outElement, inElement) => {
+          addTransfer(activeEvent, { out: outElement, in: inElement });
+          setRemoved((ids) => ids.filter((id) => id !== outElement));
+          setTarget(null);
+          setIncomingId(null);
+        }}
+        onExplorePlayer={(element) => {
+          const lineupPlayer = [
+            ...Object.values(activeVm.lineup.rows).flat(),
+            ...activeVm.lineup.bench,
+          ].find((player) => player.element === element);
+          if (lineupPlayer) openTransfer(activeVm.gw, lineupPlayer);
+          else {
+            setTarget(null);
+            setIncomingId(element);
+          }
+          requestAnimationFrame(() =>
+            planBuilderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          );
+        }}
+      />
+
+      <div ref={planBuilderRef} className="scroll-mt-16 space-y-3">
+        <div className="flex items-end justify-between gap-3 px-1 pt-1">
+          <div>
+            <h2 className="text-base font-bold">Build your plan</h2>
+            <p className="text-[11px] text-muted">
+              Pick a player on either side to explore a move.
+            </p>
           </div>
-          <PlannerPitch
-            lineup={activeVm.lineup}
-            removed={removed}
-            onRemove={(player) => {
-              setRemoved((ids) => [...new Set([...ids, player.element])]);
-              setIncomingId(null);
-              setTarget({
-                outElement: player.element,
-                event: activeEvent,
-                budget: activeVm.gw.bank + player.sellingPrice,
-                elementType: player.elementType,
-                squad: activeVm.gw.squad,
-              });
-            }}
-            index={index}
-            transferIns={activeVm.transferIns}
-            replacedBy={activeVm.replacedBy}
-            selectedElement={activeTarget?.outElement ?? null}
-            eligibleType={incoming?.elementType ?? null}
+        </div>
+
+        <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(20rem,1fr)]">
+          <div
+            className={`${activeTarget || incoming ? 'sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-10 bg-bg' : ''} lg:sticky lg:top-[calc(env(safe-area-inset-top)+4rem)]`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex gap-1 rounded-lg bg-surface2 p-1">
+                {[1, 3].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setFixtureCount(count)}
+                    aria-pressed={fixtureCount === count}
+                    className={`rounded-md px-3 py-1 text-xs ${fixtureCount === count ? 'bg-brand text-black' : 'text-muted'}`}
+                  >
+                    {count === 1 ? 'This GW' : 'Next 3 GWs'}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[10px] text-faint">× to remove · red × to restore</span>
+            </div>
+            <PlannerPitch
+              lineup={activeVm.lineup}
+              removed={removed}
+              onRemove={(player) => {
+                setRemoved((ids) => [...new Set([...ids, player.element])]);
+                setIncomingId(null);
+                setTarget({
+                  outElement: player.element,
+                  event: activeEvent,
+                  budget: activeVm.gw.bank + player.sellingPrice,
+                  elementType: player.elementType,
+                  squad: activeVm.gw.squad,
+                });
+              }}
+              index={index}
+              transferIns={activeVm.transferIns}
+              replacedBy={activeVm.replacedBy}
+              selectedElement={activeTarget?.outElement ?? null}
+              eligibleType={incoming?.elementType ?? null}
+              event={activeEvent}
+              fixtureCount={fixtureCount}
+              fixtureIndex={fixtureIndex}
+              onRevert={(element) => {
+                if (removed.includes(element)) {
+                  setRemoved((ids) => ids.filter((id) => id !== element));
+                  if (activeTarget?.outElement === element) setTarget(null);
+                  return;
+                }
+                const i = activeVm.gw.transfers.findIndex((t) => t.in === element);
+                if (i >= 0) removeTransfer(activeEvent, i);
+                setTarget(null);
+                setIncomingId(null);
+              }}
+              onSelect={(player) => openTransfer(activeVm.gw, player)}
+            />
+          </div>
+          <TransferPanel
+            target={activeTarget}
             event={activeEvent}
-            fixtureCount={fixtureCount}
+            squad={activeVm.gw.squad}
+            incoming={incoming}
+            index={index}
             fixtureIndex={fixtureIndex}
-            onRevert={(element) => {
-              if (removed.includes(element)) {
-                setRemoved((ids) => ids.filter((id) => id !== element));
-                if (activeTarget?.outElement === element) setTarget(null);
-                return;
-              }
-              const i = activeVm.gw.transfers.findIndex((t) => t.in === element);
-              if (i >= 0) removeTransfer(activeEvent, i);
+            onSelect={(inElement) => {
+              if (activeTarget) {
+                addTransfer(activeTarget.event, { out: activeTarget.outElement, in: inElement });
+                setRemoved((ids) => ids.filter((id) => id !== activeTarget.outElement));
+                setIncomingId(null);
+              } else setIncomingId(inElement);
+              setTarget(null);
+            }}
+            onClose={() => {
               setTarget(null);
               setIncomingId(null);
             }}
-            onSelect={(player) => openTransfer(activeVm.gw, player)}
           />
         </div>
-        <TransferPanel
-          target={activeTarget}
-          event={activeEvent}
-          squad={activeVm.gw.squad}
-          incoming={incoming}
-          index={index}
-          fixtureIndex={fixtureIndex}
-          onSelect={(inElement) => {
-            if (activeTarget) {
-              addTransfer(activeTarget.event, { out: activeTarget.outElement, in: inElement });
-              setRemoved((ids) => ids.filter((id) => id !== activeTarget.outElement));
-              setIncomingId(null);
-            } else setIncomingId(inElement);
-            setTarget(null);
-          }}
-          onClose={() => {
-            setTarget(null);
-            setIncomingId(null);
-          }}
-        />
       </div>
 
       <p className="px-1 text-[11px] text-faint">

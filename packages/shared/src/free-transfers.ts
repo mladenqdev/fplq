@@ -1,7 +1,7 @@
 // Rule 3.6: free transfers.
 // The entry's first GW is unlimited (represented as null). ft(first+1) = 1. Then each
-// GW rolls forward: wildcard/freehit played in the previous GW adds one without
-// consuming; otherwise ft = min(cap, max(prev - transfersMade, 0) + 1).
+// GW rolls forward: wildcard/freehit retain the exact saved balance; otherwise
+// ft = min(cap, max(prev - transfersMade, 0) + 1).
 
 export const DEFAULT_MAX_FREE_TRANSFERS = 5;
 
@@ -12,7 +12,7 @@ export function projectNextFt(
   chipUsed: boolean,
   maxFt: number = DEFAULT_MAX_FREE_TRANSFERS
 ): number {
-  if (chipUsed) return Math.min(maxFt, current + 1);
+  if (chipUsed) return Math.min(maxFt, current);
   return Math.min(maxFt, Math.max(current - transfersMade, 0) + 1);
 }
 

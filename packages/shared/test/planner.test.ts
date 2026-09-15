@@ -143,7 +143,7 @@ describe('derivePlan (rule 3.8)', () => {
     plan = addTransfer(plan, 2, { out: 6, in: 201 });
     const derived = derivePlan(plan, buildCtx());
     expect(derived.gameweeks[0]!.hitCost).toBe(0);
-    expect(derived.gameweeks[1]!.freeTransfers).toBe(2); // 1 banked +1
+    expect(derived.gameweeks[1]!.freeTransfers).toBe(1); // saved balance is retained exactly
     expect(derived.gameweeks[1]!.squad).toContain(100); // wildcard changes persist
   });
 

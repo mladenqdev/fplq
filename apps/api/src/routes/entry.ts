@@ -19,12 +19,17 @@ export function registerEntryRoutes(app: Hono, ctx: AppContext, sampler: LiveReq
   app.get('/api/entry/:id/history', async (c) => {
     const id = intParam(c, 'id');
     if (id === null) return c.json({ error: 'invalid entry id' }, 400);
-    const [entry, history] = await Promise.all([ctx.getEntry(id), ctx.getHistory(id)]);
+    const [entry, history, bootstrap] = await Promise.all([
+      ctx.getEntry(id),
+      ctx.getHistory(id),
+      ctx.getBootstrap(),
+    ]);
 
     const ftInput: FtInput = {
       startedEvent: entry.value.started_event,
       history: history.value.current.map((r) => ({ event: r.event, transfers: r.event_transfers })),
       chipEvents: history.value.chips.map((ch) => ({ name: ch.name, event: ch.event })),
+      maxFt: 1 + bootstrap.value.game_settings.max_extra_free_transfers,
     };
     const freeTransfers = [...freeTransfersByEvent(ftInput).entries()]
       .sort((a, b) => a[0] - b[0])

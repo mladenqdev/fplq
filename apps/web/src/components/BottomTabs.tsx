@@ -29,16 +29,16 @@ const tabs: Tab[] = [
     ),
   },
   {
-    to: '/planner',
-    label: 'Planner',
+    to: '/transfers',
+    label: 'Transfers',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className={iconCls}>
-        <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2" />
         <path
-          d="M3 9h18M8 2v4M16 2v4"
+          d="M4 7h14m0 0-3-3m3 3-3 3M20 17H6m0 0 3-3m-3 3 3 3"
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     ),

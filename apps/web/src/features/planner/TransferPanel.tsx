@@ -3,6 +3,8 @@ import { formatPrice, type ElementDto } from '@fplq/shared';
 import PlayerDetailSheet from '../players/PlayerDetailSheet';
 import FixtureStrip from '../../components/FixtureStrip';
 import PlayerPhoto from '../../components/PlayerPhoto';
+import SelectChevron from '../../components/SelectChevron';
+import SortDirectionButton from '../../components/SortDirectionButton';
 import { usePlayerDefcons } from '../../lib/queries';
 import type { BootstrapIndex } from '../../lib/bootstrap-index';
 import { teamFixtures, type TeamFixtureItem } from '../../lib/team-fixtures';
@@ -138,29 +140,30 @@ export default function TransferPanel({
           aria-label="Search candidates"
           className="w-full rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-accent"
         />
-        <select
-          value={club}
-          onChange={(e) => setClub(Number(e.target.value))}
-          aria-label="Filter candidates by club"
-          className="w-full rounded-lg border border-line bg-bg px-2 py-2 text-xs"
-        >
-          <option value={0}>All clubs</option>
-          {index.bootstrap.teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={club}
+            onChange={(e) => setClub(Number(e.target.value))}
+            aria-label="Filter candidates by club"
+            className="w-full appearance-none rounded-lg border border-line bg-bg py-2 pl-3 pr-11 text-xs"
+          >
+            <option value={0}>All clubs</option>
+            {index.bootstrap.teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-muted">Sort by</span>
-          <button
-            onClick={() => setAscending((value) => !value)}
-            aria-label={`Sort direction: ${ascending ? 'lowest first' : 'highest first'}. Click to reverse`}
-            className="rounded-lg bg-surface2 px-3 py-1.5 text-xs font-medium text-muted hover:text-fg"
-          >
-            {ascending ? '↑ Lowest first' : '↓ Highest first'}
-          </button>
+          <SortDirectionButton
+            ascending={ascending}
+            onToggle={() => setAscending((value) => !value)}
+            ariaLabel={`Sort direction: ${ascending ? 'lowest first' : 'highest first'}. Click to reverse`}
+          />
         </div>
         <div role="group" aria-label="Sort candidates by" className="flex flex-wrap gap-1.5">
           {SORTS.map((s) => (

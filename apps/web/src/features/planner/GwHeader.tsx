@@ -5,6 +5,7 @@ import {
   type PlannerContext,
 } from '@fplq/shared';
 import type { BootstrapIndex } from '../../lib/bootstrap-index';
+import SelectChevron from '../../components/SelectChevron';
 import { chipLabel } from '../../lib/labels';
 import { formatShortDate } from '../../lib/time';
 
@@ -22,41 +23,50 @@ export default function GwHeader({ gw, total, index, ctx, onSetChip, onRemoveTra
   const event = index.eventById.get(gw.event);
   const problems = gw.problems.filter((p) => p !== 'Negative bank');
   return (
-    <div className="space-y-2 rounded-xl border border-line bg-surface p-3">
-      <div className="flex flex-wrap items-center gap-3 lg:gap-6">
-        <div className="flex-1 lg:flex-none">
-          <span className="text-base font-bold">GW{gw.event}</span>
+    <section
+      className="space-y-3 rounded-2xl border border-line bg-surface p-3"
+      aria-label="Transfer summary"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <span className="text-base font-bold">GW{gw.event} transfer plan</span>
           <span className="ml-2 text-[11px] text-faint">
             {event ? formatShortDate(event.deadlineTime) : ''}
           </span>
         </div>
-        <select
-          aria-label="Gameweek chip"
-          value={gw.chip ?? ''}
-          onChange={(e) => onSetChip(gw.event, (e.target.value || null) as ChipName | null)}
-          className="rounded-lg border border-line bg-bg px-2 py-2 text-xs lg:order-last lg:ml-auto"
-        >
-          <option value="">No chip</option>
-          {CHIP_OPTIONS.filter(
-            (chip) => ctx.isChipAvailable(chip, gw.event) || gw.chip === chip
-          ).map((chip) => (
-            <option key={chip} value={chip}>
-              {chipLabel(chip)}
-            </option>
-          ))}
-        </select>
-        <div className="num grid w-full grid-cols-5 gap-2 text-center lg:w-auto lg:min-w-[28rem] lg:flex-1">
-          <Stat label="Est. points" value={total.toFixed(1)} accent />
-          <Stat
-            label={gw.bank < 0 ? 'Over budget' : 'Bank'}
-            value={`${gw.bank < 0 ? '−' : ''}£${formatPrice(Math.abs(gw.bank))}`}
-            bad={gw.bank < 0}
-          />
-          <Stat label="Free moves" value={String(gw.freeTransfers)} />
-          <Stat label="Transfers" value={String(gw.transfersMade)} />
-          <Stat label="Hit" value={gw.hitCost > 0 ? `−${gw.hitCost}` : '0'} bad={gw.hitCost > 0} />
+        <div className="relative shrink-0">
+          <select
+            aria-label="Gameweek chip"
+            value={gw.chip ?? ''}
+            onChange={(e) => onSetChip(gw.event, (e.target.value || null) as ChipName | null)}
+            className="min-h-10 appearance-none rounded-lg border border-line bg-bg py-2 pl-3 pr-10 text-xs"
+          >
+            <option value="">No chip</option>
+            {CHIP_OPTIONS.filter(
+              (chip) => ctx.isChipAvailable(chip, gw.event) || gw.chip === chip
+            ).map((chip) => (
+              <option key={chip} value={chip}>
+                {chipLabel(chip)}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
         </div>
       </div>
+      <div className="num grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+        <Stat label="Free transfers" value={String(gw.freeTransfers)} accent />
+        <Stat
+          label={gw.bank < 0 ? 'Over budget' : 'Bank'}
+          value={`${gw.bank < 0 ? '−' : ''}£${formatPrice(Math.abs(gw.bank))}`}
+          bad={gw.bank < 0}
+        />
+        <Stat label="Planned" value={String(gw.transfersMade)} />
+        <Stat label="Hit" value={gw.hitCost > 0 ? `−${gw.hitCost}` : '0'} bad={gw.hitCost > 0} />
+        <Stat label="Estimated XI" value={total.toFixed(1)} className="col-span-2 sm:col-span-1" />
+      </div>
+      <p className="text-[10px] text-faint">
+        Free transfers calculated from official FPL transfer and chip history.
+      </p>
       {gw.transfers.length > 0 && (
         <details className="text-xs">
           <summary className="cursor-pointer py-1 text-muted">
@@ -86,7 +96,7 @@ export default function GwHeader({ gw, total, index, ctx, onSetChip, onRemoveTra
           {problem}
         </p>
       ))}
-    </div>
+    </section>
   );
 }
 
@@ -95,14 +105,16 @@ function Stat({
   value,
   bad = false,
   accent = false,
+  className = '',
 }: {
   label: string;
   value: string;
   bad?: boolean;
   accent?: boolean;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={`rounded-lg bg-surface2 px-2 py-2 ${className}`}>
       <div className="text-[9px] uppercase tracking-wide text-faint">{label}</div>
       <div
         className={`text-sm font-bold ${bad ? 'text-down' : accent ? 'text-accent' : 'text-fg'}`}

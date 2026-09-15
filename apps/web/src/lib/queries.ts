@@ -3,6 +3,15 @@ import { api } from './api';
 
 const MIN = 60_000;
 
+export function usePlayerRecent() {
+  return useQuery({
+    queryKey: ['playerRecent'],
+    queryFn: api.playerRecent,
+    staleTime: 5 * MIN,
+    refetchInterval: 5 * MIN,
+  });
+}
+
 export function usePlayerDefcons(enabled = true) {
   return useQuery({
     queryKey: ['playerDefcons'],

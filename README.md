@@ -84,7 +84,7 @@ curl -s http://localhost:8787/api/entry/1965441/live/1
 Production: https://fplq.fplq.workers.dev. One Cloudflare Worker serves the app and API, with rank history in D1; local development uses SQLite.
 
 - Live rank compared with the overall rank at the start of the GW.
-- Five-GW planner with a permanent candidate panel, unrestricted budget exploration, stable replacement slots, direct revert, Undo/Redo and explicit metric sorting.
-- Dedicated two-player comparison with mobile pickers, grouped stats, Defcons per appearance and upcoming fixtures. Full individual stats remain available from the planner.
+- Five-GW Transfers workspace with free-transfer balance, bank, hits, conservative three/five-GW transfer ideas, form and price watchlists, permanent candidates, unrestricted budget exploration, stable replacement slots and direct revert. [Transfer idea methodology and limits](docs/TRANSFER_IDEAS.md).
+- Dedicated two-player comparison with a top-anchored mobile picker, a searchable metric-ranked player explorer, grouped stats, Defcons per appearance and upcoming fixtures. Full individual stats remain available from Transfers.
 
 See [status and handoff](docs/STATUS.md) for deployment details and current limitations.

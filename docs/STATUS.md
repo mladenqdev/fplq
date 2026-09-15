@@ -1,6 +1,6 @@
 # fplq — status & handoff
 
-Last updated: 2026-09-07. This is the running record of what exists and how it was built, so work can continue in a fresh session. For the full contract (FPL API facts, domain rules, DTOs, hosting) see [ARCHITECTURE.md](ARCHITECTURE.md).
+Last updated: 2026-09-14. This is the running record of what exists and how it was built, so work can continue in a fresh session. For the full contract (FPL API facts, domain rules, DTOs, hosting) see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What it is
 
@@ -15,7 +15,8 @@ A personal Fantasy Premier League PWA for Mladen (FPL entry **1965441**). The he
 ## Stack & repo layout
 
 pnpm workspaces monorepo, TypeScript strict, ESM.
-- `packages/shared` (`@fplq/shared`) — FPL types, our DTOs, and ALL pure domain logic (bonus, auto-subs, live points, free transfers, prices, planner `derivePlan`, FDR, `projection`, formatters). Vitest: **85 shared tests pass**. No runtime deps; consumed as TS source.
+
+- `packages/shared` (`@fplq/shared`) — FPL types, our DTOs, and ALL pure domain logic (bonus, auto-subs, live points, free transfers, prices, planner `derivePlan`, FDR, `projection`, formatters). Vitest: **86 shared tests pass**. No runtime deps; consumed as TS source.
 - `apps/api` (`@fplq/api`) — Hono. Runs on TWO runtimes from one codebase:
   - Node (local dev): `src/index.ts` + `@hono/node-server` + `SqliteRankStore` (`node:sqlite`) + a `setInterval` sampler. Port 8787.
   - Cloudflare Workers (prod): `src/worker.ts` (`export default { fetch, scheduled }`) + `D1RankStore` + a Cron Trigger sampler. Serves web assets via the `ASSETS` binding.
@@ -29,15 +30,17 @@ pnpm workspaces monorepo, TypeScript strict, ESM.
 - `pnpm deploy` — build web + `wrangler deploy` (single-worker prod deploy).
 - Env: local `apps/api/.env` (`PORT`, `FPLQ_TRACKED_ENTRIES=1965441`, `FPLQ_DB_PATH`) and `apps/web/.env` (`VITE_DEFAULT_ENTRY_ID=1965441`); both gitignored, `.env.example` committed. Prod web is same-origin (no `VITE_API_BASE`).
 
-## Features built (all live)
+## Features built
 
 - **Live tab**: live overall rank versus GW start overall rank, points/delta, averages, trajectory with explicit refresh/error/empty states, rank ladder, lineup and mini-leagues. Worker cache reuse, kickoff liveness and polling are fixed.
-- **Planner tab**: permanent candidate browser beside the pitch on desktop, compact stacked mobile layout. Hover/touch × removes into a temporary slot; red × restores or reverts. Completed replacements retain the original pitch/bench slot. Undo/Redo/Reset, one- or three-GW fixtures, optional overview. Over-budget candidates remain selectable with negative bank shown. Sort by controls metric, value and direction without duplicate price/ownership. Full player stats are accessible in the panel. Projections include captain/chips/hits.
+- **Transfers tab** (`/transfers`, with `/planner` redirect): five-GW workspace with the verified free-transfer balance, bank, planned moves, hits and estimated XI. Transfer radar shows affordable same-position ideas, form leaders, likely price risers/fallers and squad issues. The permanent candidate browser remains beside the pitch on desktop with a compact stacked mobile layout. Hover/touch × removes into a temporary slot; red × restores or reverts. Completed replacements retain the original pitch/bench slot. Undo/Redo/Clear plan, one- or three-GW fixtures and optional overview remain available. Over-budget candidates can still be selected with the negative bank shown.
 - **Fixtures tab**: FDR ticker, 5/8 GW toggle, sortable with blanks/doubles.
-- **Compare tab** (`/players`): two visible selection cards with searchable position-filtered pickers, immediate side-by-side statistics and upcoming fixtures, sticky cards, clear/change controls. Mobile checked at 390×844 without horizontal overflow. Selection is page-local.
+- **Compare tab** (`/players`): two visible selection cards with top-anchored searchable pickers, immediate side-by-side statistics and upcoming fixtures, sticky cards and clear/change controls. Before two players are chosen, a searchable player explorer ranks points, xG, xA, xGI, Defcons and minutes per appearance and assigns directly to P1/P2. Mobile checked at 390×844 and at a simulated 390×500 keyboard viewport without horizontal overflow or picker movement. Selection is page-local.
 - **Defcons/game**: API aggregates defensive actions per actual fixture appearance, including substitutes and double GWs. Used by comparison, planner sorting and player details; missing data is not shown as zero.
 - **Settings** — entry id, theme, clear cache.
 - **PWA** — installable, offline shell, branded green→cyan "Q" favicon + icons (favicon.svg, icon-192/512, maskable, apple-touch).
+- **Transfer ideas revision**: three/five-GW, minutes-screened recommendations compare optimal XI impact using regressed underlying stats and finalized DC returns. Extra planned hits, future conflicts, budget and sensitivity checks can produce a hold recommendation. See [TRANSFER_IDEAS.md](TRANSFER_IDEAS.md) for assumptions and validation limits. Prediction quality has not been backtested.
+- **Current local verification**: TypeScript, production builds, formatting and diff checks pass; Vitest has 86 shared, 7 API and 21 web tests (114 total). Browser checks confirm the current squad's hold state for three/five weeks, gameweek navigation and a 390×844 layout without page overflow. Nonempty recommendation logic is covered by synthetic tests; this is not a forecast-quality backtest or physical-phone test. These checks do not establish production deployment; publication follows commit and push to `main` through Cloudflare Workers Builds.
 
 ## Projected points (planner) — it's an ESTIMATE
 
@@ -61,7 +64,7 @@ Rule: never commit/push/branch without Mladen's explicit go-ahead each time.
 - Autodeploy end-to-end unconfirmed (see above).
 - Live headline points use FPL's official summary, which can lag the fresher live feed by a few points mid-match (by design — keeps points and rank consistent, matches the official app). "Our live estimate" line explains the gap.
 - Initial planner XI and captain are selected automatically by projection; manual lineup/captain selection is not implemented. Completed transfers preserve original slots. Pending removals are temporary UI state and do not adjust the committed plan totals until replaced.
-- Compare selection resets on navigation/reload. Mobile browser viewport was checked; an installed PWA with the real on-screen keyboard still needs device testing.
+- Compare selection resets on navigation/reload. Mobile browser and reduced-height keyboard viewports were checked; an installed PWA with the real iOS/Android on-screen keyboard still needs device testing.
 - Cache is per-isolate on Workers (each isolate has its own in-memory TTL cache) — fine, just more upstream calls; not shared across isolates in v1.
 
 ## Likely next steps
