@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 import AppShell from './components/AppShell';
+import RouteErrorPage from './components/RouteErrorPage';
 import FirstRun from './features/onboarding/FirstRun';
 import { useEntryIdStore } from './stores/useEntryId';
 
@@ -14,6 +15,7 @@ const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
 const router = createBrowserRouter([
   {
     element: <AppShell />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: '/', element: <LivePage /> },
       { path: '/league/:id', element: <LeaguePage /> },

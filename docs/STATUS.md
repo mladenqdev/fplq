@@ -1,6 +1,6 @@
 # fplq — status & handoff
 
-Last updated: 2026-09-14. This is the running record of what exists and how it was built, so work can continue in a fresh session. For the full contract (FPL API facts, domain rules, DTOs, hosting) see [ARCHITECTURE.md](ARCHITECTURE.md).
+Last updated: 2026-09-23. This is the running record of what exists and how it was built, so work can continue in a fresh session. For the full contract (FPL API facts, domain rules, DTOs, hosting) see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## What it is
 
@@ -38,9 +38,9 @@ pnpm workspaces monorepo, TypeScript strict, ESM.
 - **Compare tab** (`/players`): two visible selection cards with top-anchored searchable pickers, immediate side-by-side statistics and upcoming fixtures, sticky cards and clear/change controls. Before two players are chosen, a searchable player explorer ranks points, xG, xA, xGI, Defcons and minutes per appearance and assigns directly to P1/P2. Mobile checked at 390×844 and at a simulated 390×500 keyboard viewport without horizontal overflow or picker movement. Selection is page-local.
 - **Defcons/game**: API aggregates defensive actions per actual fixture appearance, including substitutes and double GWs. Used by comparison, planner sorting and player details; missing data is not shown as zero.
 - **Settings** — entry id, theme, clear cache.
-- **PWA** — installable, offline shell, branded green→cyan "Q" favicon + icons (favicon.svg, icon-192/512, maskable, apple-touch).
+- **PWA**: installable, offline shell, branded green→cyan "Q" favicon + icons (favicon.svg, icon-192/512, maskable, apple-touch). Service-worker activation now refreshes open clients to match the new precache. Route chunk failures get a bounded automatic reload and an accessible reload/back fallback.
 - **Transfer ideas revision**: three/five-GW, minutes-screened recommendations compare optimal XI impact using regressed underlying stats and finalized DC returns. Extra planned hits, future conflicts, budget and sensitivity checks can produce a hold recommendation. See [TRANSFER_IDEAS.md](TRANSFER_IDEAS.md) for assumptions and validation limits. Prediction quality has not been backtested.
-- **Current local verification**: TypeScript, production builds, formatting and diff checks pass; Vitest has 86 shared, 7 API and 21 web tests (114 total). Browser checks confirm the current squad's hold state for three/five weeks, gameweek navigation and a 390×844 layout without page overflow. Nonempty recommendation logic is covered by synthetic tests; this is not a forecast-quality backtest or physical-phone test. These checks do not establish production deployment; publication follows commit and push to `main` through Cloudflare Workers Builds.
+- **Local verification**: Vitest has 86 shared, 7 API and 30 web tests (123 total). The September 23 route-loading checks are recorded below. Earlier browser checks confirmed the current squad's hold state for three/five weeks, gameweek navigation and a 390×844 layout without page overflow. Nonempty recommendation logic is covered by synthetic tests; this is not a forecast-quality backtest or physical-phone test. Local checks do not establish production deployment; publication follows commit and push to `main` through Cloudflare Workers Builds.
 
 ## Projected points (planner) — it's an ESTIMATE
 
@@ -66,6 +66,14 @@ Rule: never commit/push/branch without Mladen's explicit go-ahead each time.
 - Initial planner XI and captain are selected automatically by projection; manual lineup/captain selection is not implemented. Completed transfers preserve original slots. Pending removals are temporary UI state and do not adjust the committed plan totals until replaced.
 - Compare selection resets on navigation/reload. Mobile browser and reduced-height keyboard viewports were checked; an installed PWA with the real iOS/Android on-screen keyboard still needs device testing.
 - Cache is per-isolate on Workers (each isolate has its own in-memory TTL cache) — fine, just more upstream calls; not shared across isolates in v1.
+
+## League route loading fix: 2026-09-23
+
+- The reported `LeaguePage-BVtZ0n4I.js` URL returned HTML through the SPA fallback, while production referenced `LeaguePage-BSy-F61a.js`. The open client was requesting an obsolete asset, before any league API call.
+- `registerType: 'autoUpdate'` was configured without the virtual registration client. Added `registerSW({ immediate: true })` and its explicit `workbox-window` build dependency so activated updates reload the running page. See the [Vite PWA registration requirement](https://vite-pwa-org.netlify.app/guide/auto-update).
+- An eagerly loaded route error page recognizes JS/CSS chunk-load failures and attempts one reload per 60 seconds per tab. Offline clients and clients with blocked session storage get a manual reload button instead. Other route errors do not trigger automatic reloads. Recovery retains the URL, entry ID and persisted plan; page-local selections still reset on reload.
+- Regression checks cover Chrome/Safari/Firefox error messages, repeat-failure protection, offline recovery, blocked storage and unrelated errors. Headless Chromium checks against the production build simulated the same HTML-instead-of-JS failure: a transient failure recovered, a permanent failure stopped after one reload, manual retry worked, and the fallback fit a 390×844 viewport. A real generated service-worker update also reloaded the open league page. API data in these browser checks was synthetic; physical-device PWA testing remains outstanding.
+- Existing clients already stuck on the old error page may need one manual refresh to obtain this fix. No cache clearing or PWA reinstall is required by the recovery flow.
 
 ## Likely next steps
 

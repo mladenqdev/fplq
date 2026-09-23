@@ -208,6 +208,8 @@ Entry id (change), theme, about, cache clear (unregister SW + reload).
 
 `vite-plugin-pwa` with `registerType: 'autoUpdate'`, manifest name `fplq`, short_name `fplq`, theme color matching the dark background, display standalone, start_url `/`, icons 192 and 512 (generate simple SVG-based PNGs in `public/`, a bold "Q" on purple is fine). Workbox runtime caching: `/api/**` NetworkFirst with 10 s timeout and max age 1 h, images CacheFirst. App shell precached.
 
+`main.tsx` imports `registerSW` from `virtual:pwa-register` and registers immediately. This connects service-worker activation to page reload, keeping the running route imports in sync with the new precache. `workbox-window` is an explicit web build dependency. The router has an eagerly loaded error page for failed lazy routes: recognized JS/CSS load errors trigger a reload only when online and outside a 60-second session-storage cooldown. A persistent failure, offline state or unavailable storage leaves a manual reload/back action instead of a reload loop. Ordinary render/API errors do not trigger this automatic recovery. Reload preserves the route and persisted stores, but resets page-local state.
+
 ### Design notes
 
 Clean, dense but readable on a phone, one accent color (green `#00ff87`-like FPL green tuned for contrast on dark, and a purple for headers), system font stack, tabular numbers for points and ranks, no decorative noise. Touch targets 44 px. Avoid layout shift on refetch (keep previous data while loading).
