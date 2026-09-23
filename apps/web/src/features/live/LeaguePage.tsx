@@ -1,4 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router';
+import { formatRankCompact } from '@fplq/shared';
 import { useLeague } from '../../lib/queries';
 import { useEntryId } from '../../stores/useEntryId';
 import { ErrorState, LoadingScreen } from '../../components/states';
@@ -11,6 +12,9 @@ function movementLabel(rank: number, lastRank: number): string {
   if (change < 0) return `down ${-change} ${change === -1 ? 'place' : 'places'} since GW start`;
   return 'unchanged since GW start';
 }
+
+const rowGrid =
+  'grid grid-cols-[2.75rem_minmax(0,1fr)_3rem_2.25rem_3rem] items-center gap-1.5 sm:grid-cols-[4rem_minmax(0,1fr)_4.5rem_3rem_3.5rem] sm:gap-2';
 
 export default function LeaguePage() {
   const params = useParams();
@@ -43,9 +47,12 @@ export default function LeaguePage() {
           </p>
 
           <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-            <div className="grid grid-cols-[3.75rem_minmax(0,1fr)_2.5rem_3.25rem] gap-2 border-b border-line px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-faint">
+            <div
+              className={`${rowGrid} border-b border-line px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-faint`}
+            >
               <span>Rank</span>
               <span>Team</span>
+              <span className="text-right">Move</span>
               <span className="text-right">GW</span>
               <span className="text-right">Total</span>
             </div>
@@ -57,19 +64,15 @@ export default function LeaguePage() {
                     <Link
                       to={`/league/${id}/team/${row.entry}?page=${page}`}
                       aria-label={`View ${row.entry_name}, ${row.player_name}'s team, rank ${row.rank}, ${movementLabel(row.rank, row.last_rank)}`}
-                      className={`grid min-h-14 grid-cols-[3.75rem_minmax(0,1fr)_2.5rem_3.25rem] items-center gap-2 px-3 py-2.5 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand active:bg-brand-soft ${
+                      className={`${rowGrid} min-h-14 px-3 py-2.5 transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand active:bg-brand-soft ${
                         isMe ? 'bg-brand-soft' : ''
                       }`}
                     >
-                      <span className="flex flex-col items-start gap-0.5">
-                        <span className="num text-sm font-semibold leading-none text-fg">
-                          {row.rank}
+                      <span className="num text-sm font-semibold text-fg">
+                        <span className="sm:hidden">
+                          {row.rank >= 10_000 ? formatRankCompact(row.rank) : row.rank}
                         </span>
-                        <RankDelta
-                          current={row.rank}
-                          previous={row.last_rank > 0 ? row.last_rank : null}
-                          className="leading-none"
-                        />
+                        <span className="hidden sm:inline">{row.rank}</span>
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1 text-sm font-medium text-fg">
@@ -80,6 +83,11 @@ export default function LeaguePage() {
                         </div>
                         <div className="truncate text-[11px] text-faint">{row.player_name}</div>
                       </div>
+                      <RankDelta
+                        current={row.rank}
+                        previous={row.last_rank > 0 ? row.last_rank : null}
+                        className="justify-end whitespace-nowrap"
+                      />
                       <span className="num text-right text-sm text-muted">{row.event_total}</span>
                       <span className="num text-right text-sm font-semibold text-fg">
                         {row.total}
