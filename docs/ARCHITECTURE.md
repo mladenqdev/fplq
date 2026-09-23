@@ -167,6 +167,8 @@ Data layer: TanStack Query with a thin typed client (`api.ts`) over `/api`. `sta
 5. Points on bench and computed total vs official (small text).
 6. Mini-leagues: list of the entry's classic leagues with rank and movement (entry_rank vs entry_last_rank), tap to a simple standings page (`/league/:id`) using `/api/league/:id`.
 
+Standings rows link to `/league/:id/team/:entryId?page=N`. The league page stores pagination in the URL so the team page can return to the same standings page. The team view reuses `/api/entry/:entryId/live/:gw` for the current released gameweek, with the manager/team name, official points and ranks, chip/hit, pitch, bench and player points breakdown. Viewing a rival never updates the saved entry ID or transfer plan. The view handles loading, unavailable picks with retry, invalid team IDs and the pre-season period before public lineups exist. Future lineups and authenticated team changes are not exposed.
+
 ### Transfers tab (`/transfers`)
 
 `/planner` redirects to this route so existing bookmarks continue to work. Starting point comes from `/api/entry/:id/squad`, with five future gameweeks. A compact GW selector and transfer summary show estimated points, bank (including negative values), the history-derived free-transfer balance, planned moves, hits and chip selection.

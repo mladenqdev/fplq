@@ -7,6 +7,7 @@ import { useEntryIdStore } from './stores/useEntryId';
 
 const LivePage = lazy(() => import('./features/live/LivePage'));
 const LeaguePage = lazy(() => import('./features/live/LeaguePage'));
+const LeagueTeamPage = lazy(() => import('./features/live/LeagueTeamPage'));
 const PlannerPage = lazy(() => import('./features/planner/PlannerPage'));
 const FixturesPage = lazy(() => import('./features/fixtures/FixturesPage'));
 const PlayersPage = lazy(() => import('./features/players/PlayersPage'));
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <LivePage /> },
       { path: '/league/:id', element: <LeaguePage /> },
+      { path: '/league/:id/team/:entryId', element: <LeagueTeamPage /> },
       { path: '/transfers', element: <PlannerPage /> },
       { path: '/planner', element: <Navigate to="/transfers" replace /> },
       { path: '/fixtures', element: <FixturesPage /> },
