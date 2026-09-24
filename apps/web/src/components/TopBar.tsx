@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useBootstrap } from '../lib/queries';
 import { formatCountdown, useNow } from '../lib/time';
 
@@ -15,10 +16,16 @@ export default function TopBar() {
     <header className="fixed inset-x-0 top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-brand text-sm font-black text-black">
-            Q
-          </span>
-          <span className="text-lg font-bold tracking-tight">fplq</span>
+          <Link
+            to="/"
+            aria-label="Go to homepage"
+            className="flex min-h-11 items-center gap-2 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <span className="grid size-7 place-items-center rounded-lg bg-gradient-to-br from-accent to-brand text-sm font-black text-black">
+              Q
+            </span>
+            <span className="text-lg font-bold tracking-tight">fplq</span>
+          </Link>
           {currentEvent != null && (
             <span className="ml-1 rounded-full bg-surface2 px-2 py-0.5 text-xs font-medium text-muted">
               GW{currentEvent}
